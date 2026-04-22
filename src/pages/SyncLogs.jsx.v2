@@ -1,0 +1,1287 @@
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { useToast } from '@/hooks/use-toast'
+import { format } from 'date-fns'
+import {
+  Search,
+  RefreshCw,
+  Download,
+  Filter,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  AlertTriangle,
+  FileText,
+  Calendar,
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+  Trash2,
+  Eye,
+  PlayCircle,
+  PauseCircle,
+  Info as InfoIcon,
+  Wifi,
+  WifiOff,
+  Terminal,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Bug,
+  AlertCircle,
+  Columns,
+  Bell,
+  FileJson,
+  FileSpreadsheet
+} from 'lucide-react'
+
+// Enhanced mock data with log levels
+const mockLogs = [
+  {
+    id: 1,
+    timestamp: '2024-10-03T08:45:00',
+    platform: 'Amazon Seller',
+    type: 'Product Sync',
+    status: 'success',
+    level: 'info',
+    message: 'Successfully synced 45 products',
+    duration: '2.3s',
+    durationSeconds: 2.3,
+    details: { synced: 45, failed: 0, skipped: 0 },
+    errorDetails: null,
+    requestId: 'req_amazon_prod_001',
+    endpoint: '/api/v1/products/sync',
+    retryable: false
+  },
+  {
+    id: 2,
+    timestamp: '2024-10-03T08:30:00',
+    platform: 'Shopee Thailand',
+    type: 'Order Sync',
+    status: 'success',
+    level: 'info',
+    message: 'Successfully synced 12 orders',
+    duration: '1.8s',
+    durationSeconds: 1.8,
+    details: { synced: 12, failed: 0, skipped: 0 },
+    errorDetails: null,
+    requestId: 'req_shopee_order_002',
+    endpoint: '/api/v1/orders/sync',
+    retryable: false
+  },
+  {
+    id: 3,
+    timestamp: '2024-10-03T08:15:00',
+    platform: 'Lazada Official Store',
+    type: 'Inventory Sync',
+    status: 'warning',
+    level: 'warning',
+    message: 'Synced with warnings: 3 items out of stock',
+    duration: '3.1s',
+    durationSeconds: 3.1,
+    details: { synced: 28, failed: 0, skipped: 3 },
+    errorDetails: {
+      warnings: [
+        'Product SKU-001: Out of stock',
+        'Product SKU-045: Out of stock',
+        'Product SKU-089: Out of stock'
+      ]
+    },
+    requestId: 'req_lazada_inv_003',
+    endpoint: '/api/v1/inventory/sync',
+    retryable: true
+  },
+  {
+    id: 4,
+    timestamp: '2024-10-03T08:00:00',
+    platform: 'LINE Shopping',
+    type: 'Product Sync',
+    status: 'error',
+    level: 'error',
+    message: 'Failed to sync: API rate limit exceeded',
+    duration: '0.5s',
+    durationSeconds: 0.5,
+    details: { synced: 0, failed: 15, skipped: 0 },
+    errorDetails: {
+      error: 'RateLimitError',
+      message: 'API rate limit exceeded. Please retry after 60 seconds.',
+      code: 'RATE_LIMIT_EXCEEDED',
+      retryAfter: '60s',
+      stackTrace: 'at LineAPIClient.sync (line-api.js:145)\nat SyncService.syncProducts (sync.js:89)'
+    },
+    requestId: 'req_line_prod_004',
+    endpoint: '/api/v1/products/sync',
+    retryable: true
+  },
+  {
+    id: 5,
+    timestamp: '2024-10-03T07:45:00',
+    platform: 'Stripe Production',
+    type: 'Payment Sync',
+    status: 'success',
+    level: 'info',
+    message: 'Successfully synced 8 payments',
+    duration: '1.2s',
+    durationSeconds: 1.2,
+    details: { synced: 8, failed: 0, skipped: 0 },
+    errorDetails: null,
+    requestId: 'req_stripe_pay_005',
+    endpoint: '/api/v1/payments/sync',
+    retryable: false
+  },
+  {
+    id: 6,
+    timestamp: '2024-10-03T07:30:00',
+    platform: 'PayPal Business',
+    type: 'Payment Sync',
+    status: 'error',
+    level: 'critical',
+    message: 'Critical: Payment gateway connection failed',
+    duration: '0.2s',
+    durationSeconds: 0.2,
+    details: { synced: 0, failed: 5, skipped: 0 },
+    errorDetails: {
+      error: 'ConnectionError',
+      message: 'Unable to establish connection to PayPal gateway',
+      code: 'CONNECTION_FAILED'
+    },
+    requestId: 'req_paypal_pay_006',
+    endpoint: '/api/v1/payments/sync',
+    retryable: true
+  },
+  {
+    id: 7,
+    timestamp: '2024-10-03T07:15:00',
+    platform: 'Amazon Seller',
+    type: 'Order Sync',
+    status: 'success',
+    level: 'debug',
+    message: 'Debug: Successfully synced 18 orders with detailed tracking',
+    duration: '2.1s',
+    durationSeconds: 2.1,
+    details: { synced: 18, failed: 0, skipped: 0 },
+    errorDetails: null,
+    requestId: 'req_amazon_order_007',
+    endpoint: '/api/v1/orders/sync',
+    retryable: false
+  },
+  {
+    id: 8,
+    timestamp: '2024-10-03T07:00:00',
+    platform: 'Shopee Thailand',
+    type: 'Inventory Sync',
+    status: 'warning',
+    level: 'warning',
+    message: 'Synced with warnings: 2 items low stock',
+    duration: '2.8s',
+    durationSeconds: 2.8,
+    details: { synced: 32, failed: 0, skipped: 2 },
+    errorDetails: {
+      warnings: [
+        'Product SKU-123: Low stock (5 remaining)',
+        'Product SKU-456: Low stock (3 remaining)'
+      ]
+    },
+    requestId: 'req_shopee_inv_008',
+    endpoint: '/api/v1/inventory/sync',
+    retryable: true
+  }
+]
+
+const platformStatus = {
+  'Amazon Seller': { connected: true, lastSync: '2 min ago' },
+  'Shopee Thailand': { connected: true, lastSync: '15 min ago' },
+  'Lazada Official Store': { connected: false, lastSync: '45 min ago' },
+  'LINE Shopping': { connected: true, lastSync: '30 min ago' },
+  'Stripe Production': { connected: true, lastSync: '5 min ago' },
+  'PayPal Business': { connected: false, lastSync: '10 min ago' },
+  'Wise Business': { connected: false, lastSync: '1 hour ago' },
+  'Payoneer': { connected: true, lastSync: '20 min ago' }
+}
+
+const getLevelIcon = (level) => {
+  switch (level) {
+    case 'info':
+      return <InfoIcon className="h-4 w-4 text-blue-600" />
+    case 'debug':
+      return <Bug className="h-4 w-4 text-purple-600" />
+    case 'warning':
+      return <AlertTriangle className="h-4 w-4 text-yellow-600" />
+    case 'error':
+      return <XCircle className="h-4 w-4 text-red-600" />
+    case 'critical':
+      return <AlertCircle className="h-4 w-4 text-red-900" />
+    default:
+      return <Activity className="h-4 w-4 text-gray-600" />
+  }
+}
+
+const getLevelBadge = (level) => {
+  const config = {
+    info: { variant: 'default', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+    debug: { variant: 'outline', className: 'bg-purple-100 text-purple-800 border-purple-200' },
+    warning: { variant: 'secondary', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+    error: { variant: 'destructive', className: 'bg-red-100 text-red-800 border-red-200' },
+    critical: { variant: 'destructive', className: 'bg-red-900 text-white border-red-900' }
+  }
+  const { variant, className } = config[level] || config.info
+  return (
+    <Badge variant={variant} className={`flex items-center gap-1 ${className}`}>
+      {getLevelIcon(level)}
+      {level?.toUpperCase()}
+    </Badge>
+  )
+}
+
+const getStatusIcon = (status) => {
+  switch (status) {
+    case 'success':
+      return <CheckCircle2 className="h-4 w-4 text-green-600" />
+    case 'error':
+      return <XCircle className="h-4 w-4 text-red-600" />
+    case 'warning':
+      return <AlertTriangle className="h-4 w-4 text-yellow-600" />
+    case 'pending':
+      return <Clock className="h-4 w-4 text-blue-600" />
+    default:
+      return <Activity className="h-4 w-4 text-gray-600" />
+  }
+}
+
+const getStatusBadge = (status) => {
+  const variants = {
+    success: 'default',
+    error: 'destructive',
+    warning: 'secondary',
+    pending: 'outline'
+  }
+  return (
+    <Badge variant={variants[status]} className="flex items-center gap-1">
+      {getStatusIcon(status)}
+      {status}
+    </Badge>
+  )
+}
+
+export default function SyncLogs() {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [platformFilter, setPlatformFilter] = useState('all')
+  const [levelFilter, setLevelFilter] = useState('all')
+  const [dateRange, setDateRange] = useState('all')
+  const [customDateFrom, setCustomDateFrom] = useState(null)
+  const [customDateTo, setCustomDateTo] = useState(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [expandedLog, setExpandedLog] = useState(null)
+  const [showPlatformStatus, setShowPlatformStatus] = useState(true)
+  const [newLogsCount, setNewLogsCount] = useState(0)
+  
+  // Column visibility
+  const [visibleColumns, setVisibleColumns] = useState({
+    timestamp: true,
+    platform: true,
+    type: true,
+    status: true,
+    level: true,
+    message: true,
+    duration: true,
+    details: true,
+    requestId: false,
+    actions: true
+  })
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState('timestamp')
+  const [sortOrder, setSortOrder] = useState('desc')
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  
+  // Bulk selection state
+  const [selectedLogs, setSelectedLogs] = useState([])
+  const [selectAll, setSelectAll] = useState(false)
+  
+  const { toast } = useToast()
+
+  // Simulate real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const randomCount = Math.floor(Math.random() * 5)
+      setNewLogsCount(prev => prev + randomCount)
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Auto-refresh functionality
+  useEffect(() => {
+    let interval
+    if (autoRefresh) {
+      interval = setInterval(() => {
+        handleRefresh(true)
+      }, 30000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [autoRefresh])
+
+  const handleRefresh = (silent = false) => {
+    setIsRefreshing(true)
+    setTimeout(() => {
+      setIsRefreshing(false)
+      setNewLogsCount(0)
+      if (!silent) {
+        toast({ title: 'Logs refreshed', description: 'Sync logs have been updated' })
+      }
+    }, 1000)
+  }
+
+  const handleExport = (format) => {
+    const logsToExport = selectedLogs.length > 0 
+      ? filteredLogs.filter(log => selectedLogs.includes(log.id))
+      : filteredLogs
+    toast({ 
+      title: `Export started (${format.toUpperCase()})`, 
+      description: `Downloading ${logsToExport.length} logs as ${format.toUpperCase()}...` 
+    })
+  }
+
+  const handleQuickFilter = (filterType) => {
+    switch (filterType) {
+      case 'errors':
+        setStatusFilter('error')
+        setLevelFilter('all')
+        break
+      case 'warnings':
+        setStatusFilter('warning')
+        setLevelFilter('all')
+        break
+      case 'critical':
+        setLevelFilter('critical')
+        setStatusFilter('all')
+        break
+      case 'retryable':
+        setStatusFilter('error')
+        break
+      case 'clear':
+        setStatusFilter('all')
+        setLevelFilter('all')
+        setTypeFilter('all')
+        setPlatformFilter('all')
+        setDateRange('all')
+        setSearchTerm('')
+        setCustomDateFrom(null)
+        setCustomDateTo(null)
+        break
+    }
+    toast({ 
+      title: 'Quick filter applied', 
+      description: `Showing ${filterType === 'clear' ? 'all logs' : filterType}` 
+    })
+  }
+
+  const handleRetry = (log) => {
+    toast({ 
+      title: 'Retry initiated', 
+      description: `Retrying ${log.type} for ${log.platform}...` 
+    })
+  }
+
+  const handleClearLogs = () => {
+    toast({ 
+      title: 'Logs cleared', 
+      description: 'Old sync logs have been removed',
+      variant: 'default'
+    })
+  }
+
+  const handleViewDetails = (logId) => {
+    setExpandedLog(expandedLog === logId ? null : logId)
+  }
+
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh)
+    toast({ 
+      title: autoRefresh ? 'Auto-refresh disabled' : 'Auto-refresh enabled',
+      description: autoRefresh ? 'Logs will no longer refresh automatically' : 'Logs will refresh every 30 seconds'
+    })
+  }
+
+  const toggleColumn = (column) => {
+    setVisibleColumns(prev => ({ ...prev, [column]: !prev[column] }))
+  }
+
+  // Sorting function
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortOrder('desc')
+    }
+  }
+
+  const getSortIcon = (field) => {
+    if (sortBy !== field) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />
+    }
+    return sortOrder === 'asc' 
+      ? <ArrowUp className="h-4 w-4 ml-1" />
+      : <ArrowDown className="h-4 w-4 ml-1" />
+  }
+
+  // Bulk selection functions
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedLogs([])
+      setSelectAll(false)
+    } else {
+      setSelectedLogs(paginatedLogs.map(log => log.id))
+      setSelectAll(true)
+    }
+  }
+
+  const handleSelectLog = (logId) => {
+    if (selectedLogs.includes(logId)) {
+      setSelectedLogs(selectedLogs.filter(id => id !== logId))
+      setSelectAll(false)
+    } else {
+      const newSelected = [...selectedLogs, logId]
+      setSelectedLogs(newSelected)
+      if (newSelected.length === paginatedLogs.length) {
+        setSelectAll(true)
+      }
+    }
+  }
+
+  const handleBulkDelete = () => {
+    toast({ 
+      title: 'Logs deleted', 
+      description: `${selectedLogs.length} logs have been removed` 
+    })
+    setSelectedLogs([])
+    setSelectAll(false)
+  }
+
+  const handleBulkRetry = () => {
+    const retryableLogs = filteredLogs.filter(log => 
+      selectedLogs.includes(log.id) && log.retryable
+    )
+    toast({ 
+      title: 'Bulk retry initiated', 
+      description: `Retrying ${retryableLogs.length} failed syncs...` 
+    })
+  }
+
+  // Filter logs
+  const filteredLogs = mockLogs.filter(log => {
+    const matchesSearch = log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         log.platform.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === 'all' || log.status === statusFilter
+    const matchesLevel = levelFilter === 'all' || log.level === levelFilter
+    const matchesType = typeFilter === 'all' || log.type === typeFilter
+    const matchesPlatform = platformFilter === 'all' || log.platform === platformFilter
+    
+    // Date range filter
+    const logDate = new Date(log.timestamp)
+    const now = new Date()
+    let matchesDate = true
+    
+    if (dateRange === 'custom' && customDateFrom && customDateTo) {
+      matchesDate = logDate >= customDateFrom && logDate <= customDateTo
+    } else if (dateRange === 'today') {
+      matchesDate = logDate.toDateString() === now.toDateString()
+    } else if (dateRange === 'week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      matchesDate = logDate >= weekAgo
+    } else if (dateRange === 'month') {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      matchesDate = logDate >= monthAgo
+    }
+    
+    return matchesSearch && matchesStatus && matchesLevel && matchesType && matchesPlatform && matchesDate
+  })
+
+  // Sort logs
+  const sortedLogs = [...filteredLogs].sort((a, b) => {
+    let compareValue = 0
+    
+    switch (sortBy) {
+      case 'timestamp':
+        compareValue = new Date(a.timestamp) - new Date(b.timestamp)
+        break
+      case 'status':
+        compareValue = a.status.localeCompare(b.status)
+        break
+      case 'level':
+        compareValue = a.level.localeCompare(b.level)
+        break
+      case 'platform':
+        compareValue = a.platform.localeCompare(b.platform)
+        break
+      case 'duration':
+        compareValue = a.durationSeconds - b.durationSeconds
+        break
+      case 'type':
+        compareValue = a.type.localeCompare(b.type)
+        break
+      default:
+        compareValue = 0
+    }
+    
+    return sortOrder === 'asc' ? compareValue : -compareValue
+  })
+
+  // Pagination
+  const totalPages = Math.ceil(sortedLogs.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedLogs = sortedLogs.slice(startIndex, endIndex)
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+    setSelectedLogs([])
+    setSelectAll(false)
+  }, [searchTerm, statusFilter, levelFilter, typeFilter, platformFilter, dateRange, sortBy, sortOrder, itemsPerPage])
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    setSelectedLogs([])
+    setSelectAll(false)
+  }
+
+  const stats = {
+    total: mockLogs.length,
+    success: mockLogs.filter(l => l.status === 'success').length,
+    error: mockLogs.filter(l => l.status === 'error').length,
+    warning: mockLogs.filter(l => l.status === 'warning').length,
+    critical: mockLogs.filter(l => l.level === 'critical').length
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold">Sync Logs</h1>
+          <p className="text-muted-foreground">
+            View integration synchronization logs and activity history
+          </p>
+        </div>
+
+        {/* Real-time notification */}
+        {newLogsCount > 0 && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-5 w-5 text-blue-600 animate-pulse" />
+                  <span className="text-sm font-medium text-blue-900">
+                    {newLogsCount} new log{newLogsCount > 1 ? 's' : ''} available
+                  </span>
+                </div>
+                <Button size="sm" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => handleRefresh(false)}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh to view
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => handleRefresh(false)}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button 
+            variant={autoRefresh ? "default" : "outline"}
+            size="sm"
+            onClick={toggleAutoRefresh}
+          >
+            {autoRefresh ? <PauseCircle className="h-4 w-4 mr-2" /> : <PlayCircle className="h-4 w-4 mr-2" />}
+            Auto-refresh {autoRefresh && '(30s)'}
+          </Button>
+          
+          {/* Export Dropdown */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export {selectedLogs.length > 0 && `(${selectedLogs.length})`}
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48">
+              <div className="space-y-2">
+                <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => handleExport('csv')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export as CSV
+                </Button>
+                <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => handleExport('json')}>
+                  <FileJson className="h-4 w-4 mr-2" />
+                  Export as JSON
+                </Button>
+                <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => handleExport('excel')}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export as Excel
+                </Button>
+                <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => handleExport('pdf')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export as PDF
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Column Toggle */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Columns className="h-4 w-4 mr-2" />
+                Columns
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Toggle Columns</p>
+                {Object.entries(visibleColumns).map(([key, value]) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <Checkbox 
+                      checked={value}
+                      onCheckedChange={() => toggleColumn(key)}
+                    />
+                    <span className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                  </div>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Button variant="outline" size="sm" onClick={handleClearLogs}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear Old Logs
+          </Button>
+          {selectedLogs.length > 0 && (
+            <>
+              <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected ({selectedLogs.length})
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleBulkRetry}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Retry Selected
+              </Button>
+            </>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowPlatformStatus(!showPlatformStatus)}
+          >
+            <Activity className="h-4 w-4 mr-2" />
+            {showPlatformStatus ? 'Hide' : 'Show'} Platform Status
+          </Button>
+        </div>
+      </div>
+
+      {/* Quick Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Quick Filters</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button 
+                variant={statusFilter === 'error' && levelFilter === 'all' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => handleQuickFilter('errors')}
+              >
+                <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                Errors Only
+              </Button>
+              <Button 
+                variant={statusFilter === 'warning' && levelFilter === 'all' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => handleQuickFilter('warnings')}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2 text-yellow-600" />
+                Warnings Only
+              </Button>
+              <Button 
+                variant={levelFilter === 'critical' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => handleQuickFilter('critical')}
+              >
+                <AlertCircle className="h-4 w-4 mr-2 text-red-900" />
+                Critical Only
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleQuickFilter('retryable')}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Retryable
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => handleQuickFilter('clear')}
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Clear All Filters
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Platform Status Cards */}
+      {showPlatformStatus && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Object.entries(platformStatus).map(([platform, status]) => (
+            <Card key={platform} className={status.connected ? 'border-green-200' : 'border-red-200'}>
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      {status.connected ? (
+                        <Wifi className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <WifiOff className="h-4 w-4 text-red-600" />
+                      )}
+                      <Badge variant={status.connected ? "default" : "destructive"} className="text-xs">
+                        {status.connected ? 'Connected' : 'Disconnected'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm font-medium truncate">{platform}</p>
+                    <p className="text-xs text-muted-foreground">Last sync: {status.lastSync}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Logs</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+              </div>
+              <FileText className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Success</p>
+                <p className="text-2xl font-bold text-green-600">{stats.success}</p>
+              </div>
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Warnings</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.warning}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Errors</p>
+                <p className="text-2xl font-bold text-red-600">{stats.error}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Critical</p>
+                <p className="text-2xl font-bold text-red-900">{stats.critical}</p>
+              </div>
+              <AlertCircle className="h-8 w-8 text-red-900" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search logs..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            
+            {/* Date Range with Custom Picker */}
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Date Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="week">Last 7 Days</SelectItem>
+                <SelectItem value="month">Last 30 Days</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {dateRange === 'custom' && (
+              <>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {customDateFrom ? format(customDateFrom, 'PP') : 'From Date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={customDateFrom}
+                      onSelect={setCustomDateFrom}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {customDateTo ? format(customDateTo, 'PP') : 'To Date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={customDateTo}
+                      onSelect={setCustomDateTo}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </>
+            )}
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="success">Success</SelectItem>
+                <SelectItem value="error">Error</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={levelFilter} onValueChange={setLevelFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Levels" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Levels</SelectItem>
+                <SelectItem value="info">Info</SelectItem>
+                <SelectItem value="debug">Debug</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="error">Error</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="Product Sync">Product Sync</SelectItem>
+                <SelectItem value="Order Sync">Order Sync</SelectItem>
+                <SelectItem value="Inventory Sync">Inventory Sync</SelectItem>
+                <SelectItem value="Payment Sync">Payment Sync</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={platformFilter} onValueChange={setPlatformFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Platforms" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Platforms</SelectItem>
+                <SelectItem value="Amazon Seller">Amazon Seller</SelectItem>
+                <SelectItem value="Shopee Thailand">Shopee Thailand</SelectItem>
+                <SelectItem value="Lazada Official Store">Lazada Official Store</SelectItem>
+                <SelectItem value="LINE Shopping">LINE Shopping</SelectItem>
+                <SelectItem value="Stripe Production">Stripe Production</SelectItem>
+                <SelectItem value="PayPal Business">PayPal Business</SelectItem>
+                <SelectItem value="Wise Business">Wise Business</SelectItem>
+                <SelectItem value="Payoneer">Payoneer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sort Controls */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
+            <Button 
+              variant={sortBy === 'timestamp' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => handleSort('timestamp')}
+            >
+              Timestamp {getSortIcon('timestamp')}
+            </Button>
+            <Button 
+              variant={sortBy === 'status' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => handleSort('status')}
+            >
+              Status {getSortIcon('status')}
+            </Button>
+            <Button 
+              variant={sortBy === 'level' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => handleSort('level')}
+            >
+              Level {getSortIcon('level')}
+            </Button>
+            <Button 
+              variant={sortBy === 'platform' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => handleSort('platform')}
+            >
+              Platform {getSortIcon('platform')}
+            </Button>
+            <Button 
+              variant={sortBy === 'duration' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => handleSort('duration')}
+            >
+              Duration {getSortIcon('duration')}
+            </Button>
+            <Button 
+              variant={sortBy === 'type' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => handleSort('type')}
+            >
+              Type {getSortIcon('type')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Logs Table */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            {/* Select All */}
+            {paginatedLogs.length > 0 && (
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <Checkbox 
+                  checked={selectAll}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  Select all on this page
+                </span>
+              </div>
+            )}
+
+            {paginatedLogs.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No logs found matching your filters</p>
+              </div>
+            ) : (
+              paginatedLogs.map((log) => (
+                <div key={log.id} className="border rounded-lg overflow-hidden">
+                  <div className="p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start gap-4">
+                      <div className="pt-1">
+                        <Checkbox 
+                          checked={selectedLogs.includes(log.id)}
+                          onCheckedChange={() => handleSelectLog(log.id)}
+                        />
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {visibleColumns.status && getStatusBadge(log.status)}
+                          {visibleColumns.level && getLevelBadge(log.level)}
+                          {visibleColumns.type && <Badge variant="outline">{log.type}</Badge>}
+                          {visibleColumns.platform && <Badge variant="secondary">{log.platform}</Badge>}
+                        </div>
+                        {visibleColumns.message && <p className="text-sm font-medium">{log.message}</p>}
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                          {visibleColumns.timestamp && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(log.timestamp).toLocaleString()}
+                            </div>
+                          )}
+                          {visibleColumns.duration && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {log.duration}
+                            </div>
+                          )}
+                          {visibleColumns.details && log.details && (
+                            <div>
+                              Synced: {log.details.synced} | Failed: {log.details.failed} | Skipped: {log.details.skipped}
+                            </div>
+                          )}
+                          {visibleColumns.requestId && (
+                            <div className="flex items-center gap-1">
+                              <Terminal className="h-3 w-3" />
+                              {log.requestId}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {visibleColumns.actions && (
+                        <div className="flex items-center gap-2">
+                          {log.retryable && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleRetry(log)}
+                            >
+                              <RotateCcw className="h-3 w-3 mr-1" />
+                              Retry
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleViewDetails(log.id)}
+                          >
+                            {expandedLog === log.id ? (
+                              <>
+                                <ChevronUp className="h-4 w-4 mr-1" />
+                                Hide
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-4 w-4 mr-1" />
+                                Details
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Expanded Details */}
+                  {expandedLog === log.id && (
+                    <div className="border-t bg-muted/30 p-4 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Request ID</p>
+                          <p className="text-sm font-mono">{log.requestId}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Endpoint</p>
+                          <p className="text-sm font-mono">{log.endpoint}</p>
+                        </div>
+                      </div>
+                      
+                      {log.errorDetails && (
+                        <div className="space-y-3">
+                          {log.errorDetails.error && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Error Type</p>
+                              <Badge variant="destructive">{log.errorDetails.error}</Badge>
+                              {log.errorDetails.code && (
+                                <Badge variant="outline" className="ml-2">{log.errorDetails.code}</Badge>
+                              )}
+                            </div>
+                          )}
+                          
+                          {log.errorDetails.message && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Error Message</p>
+                              <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800">
+                                {log.errorDetails.message}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {log.errorDetails.stackTrace && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Stack Trace</p>
+                              <pre className="bg-gray-900 text-gray-100 rounded p-3 text-xs overflow-x-auto">
+                                {log.errorDetails.stackTrace}
+                              </pre>
+                            </div>
+                          )}
+                          
+                          {log.errorDetails.warnings && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Warnings</p>
+                              <ul className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-yellow-800 space-y-1">
+                                {log.errorDetails.warnings.map((warning, idx) => (
+                                  <li key={idx}>• {warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pagination Controls */}
+      {sortedLogs.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              {/* Items per page */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show</span>
+                <Select value={itemsPerPage.toString()} onValueChange={(val) => setItemsPerPage(Number(val))}>
+                  <SelectTrigger className="w-[80px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">per page</span>
+              </div>
+
+              {/* Page info */}
+              <div className="text-sm text-muted-foreground">
+                Showing {startIndex + 1} to {Math.min(endIndex, sortedLogs.length)} of {sortedLogs.length} logs
+                {autoRefresh && <span className="ml-2">• Auto-refreshing every 30 seconds</span>}
+              </div>
+
+              {/* Pagination buttons */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                })}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

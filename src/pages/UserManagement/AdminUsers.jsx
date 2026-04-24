@@ -132,7 +132,7 @@ export default function AdminUsers() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Admin Users</h1>
-        <p className="text-muted-foreground"> >Manage IBB Shuttle Admins — Permissions, Departments & Security</p>
+        <p className="text-muted-foreground">Manage IBB Shuttle Admins — Permissions, Departments & Security</p>
       </div>
 
       {/* Stats Cards */}

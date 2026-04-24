@@ -239,7 +239,7 @@ export default function PartnerProfiles() {
                 <tr className="border-b text-xs text-muted-foreground">
                   <th className="text-left py-2 font-medium">Booking Ref</th>
                   <th className="text-left py-2 font-medium">Date</th>
-                  <th className="text-left py-2 font-medium"> >Route</th>
+                  <th className="text-left py-2 font-medium">Route</th>
                   <th className="text-right py-2 font-medium">Total</th>
                   <th className="text-right py-2 font-medium">Commission (5%)</th>
                   <th className="text-right py-2 font-medium">Status</th>

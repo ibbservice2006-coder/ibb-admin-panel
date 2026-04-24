@@ -101,7 +101,7 @@ export default function ActiveTrips() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Active Trips</h1>
-            <p className="text-muted-foreground text-sm mt-0.5"> >Ongoing trips</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Ongoing trips</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -206,7 +206,7 @@ export default function ActiveTrips() {
                   <div className="flex items-center gap-2 text-sm">
                     <Car className="h-4 w-4 text-blue-600 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="text-xs text-muted-foreground"> >Driver · {trip.vehicle} · {trip.vehicleType}</p>
+                      <p className="text-xs text-muted-foreground">Driver · {trip.vehicle} · {trip.vehicleType}</p>
                       <p className="font-medium">{trip.driver}</p>
                     </div>
                     <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => toast({ title: 'Action Completed', description: 'Completed' })}>

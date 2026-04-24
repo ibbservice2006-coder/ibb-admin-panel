@@ -14,8 +14,7 @@ import {
   Smartphone,
   AlertTriangle,
   CheckCircle,
-  Clock,
-  Toggle2
+  Clock
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 

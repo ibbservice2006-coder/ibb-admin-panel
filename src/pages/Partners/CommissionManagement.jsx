@@ -142,11 +142,11 @@ export default function PartnerCommission() {
                     }} />
                   </th>
                   <th className="text-left py-2 font-medium">Partner</th>
-                  <th className="text-left py-2 font-medium"> >Installment</th>
+                  <th className="text-left py-2 font-medium">Installment</th>
                   <th className="text-right py-2 font-medium">Bookings</th>
                   <th className="text-right py-2 font-medium">Revenue</th>
                   <th className="text-right py-2 font-medium">Rate</th>
-                  <th className="text-right py-2 font-medium"> >Amount paid</th>
+                  <th className="text-right py-2 font-medium">Amount paid</th>
                   <th className="text-right py-2 font-medium">Channel</th>
                   <th className="text-right py-2 font-medium">Status</th>
                   <th className="text-right py-2 font-medium">Action</th>

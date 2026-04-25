@@ -30,7 +30,12 @@ export default function CarPricing() {
   const fetchVehicleCategories = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_API_URL}/api/pricing`);
+      const response = await fetch(`${BASE_API_URL}/api/pricing`, {
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_CLOUDFLARE_API_TOKEN || ''}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

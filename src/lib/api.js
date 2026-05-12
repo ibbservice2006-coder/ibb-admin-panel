@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_ADMIN_API_URL || 'https://ibb-admin-api.ibbservice.workers.dev'
+const BASE_URL = import.meta.env.VITE_ADMIN_API_URL || 'https://ibb-admin-api.ibb-service2006.workers.dev'
 
 // ─── Axios instance ───────────────────────────────────────────────────────────
 export const api = axios.create({

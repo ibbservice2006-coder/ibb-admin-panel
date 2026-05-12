@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from '@/components/ui/toaster'
+import { RequireRole } from '@/components/RequireRole'
 import './App.css'
 
 // Layout Components
@@ -444,8 +445,8 @@ function AppRoutes() {
         <Route path="/integrations/webhooks" element={<IntegrationsWebhooks />} />
         <Route path="/integrations/services" element={<ThirdPartyServices />} />
 
-        {/* Database Tools */}
-        <Route path="/dynamic-tools/db-management" element={<DynamicDBManagement />} />
+        {/* Database Tools — superadmin only (contains eval runner) */}
+        <Route path="/dynamic-tools/db-management" element={<RequireRole role="superadmin"><DynamicDBManagement /></RequireRole>} />
         <Route path="/dynamic-tools/relationships-designer" element={<RelationshipsDesigner />} />
         <Route path="/dynamic-tools/query-builder" element={<QueryBuilder />} />
         <Route path="/dynamic-tools/lookup-wizard" element={<LookupWizard />} />

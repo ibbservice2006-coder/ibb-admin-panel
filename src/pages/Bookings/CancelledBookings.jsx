@@ -9,17 +9,26 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Search, Filter, Download, RefreshCw, XCircle, MapPin, Clock, Eye, RotateCcw, Trash2, DollarSign } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-const cancelledBookingsData = [
-  { id: 'BK-2024-013', customer: 'Alice Brown', phone: '+66-8-3333-4444', pickup: 'Siam Paragon', dropoff: 'Don Mueang Airport', passengers: 2, fare: '฿520', cancelledTime: '2024-03-22 08:30', reason: 'Customer Request', refunded: true },
-  { id: 'BK-2024-015', customer: 'Bob Green', phone: '+66-8-5555-6666', pickup: 'MBK Center', dropoff: 'Chatuchak', passengers: 1, fare: '฿180', cancelledTime: '2024-03-22 09:15', reason: 'No Driver Available', refunded: false },
-  { id: 'BK-2024-017', customer: 'Carol White', phone: '+66-8-7777-8888', pickup: 'Asiatique', dropoff: 'Silom', passengers: 3, fare: '฿350', cancelledTime: '2024-03-22 11:45', reason: 'Duplicate Booking', refunded: true },
-]
+import { useBookings } from '@/hooks/useBookings'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 export default function CancelledBookings() {
   const { toast } = useToast()
+  const { data, isLoading, isError, refetch } = useBookings({ status: 'cancelled' })
+  const bookings = (data?.data ?? []).map(b => ({
+    id: b.id,
+    _uuid: b._uuid,
+    customer: b.customer,
+    phone: b.phone,
+    pickup: b.pickup,
+    dropoff: b.dropoff,
+    passengers: b.passengers,
+    fare: `฿${(b.fare || 0).toLocaleString()}`,
+    cancelledTime: b.date && b.time ? `${b.date} ${b.time}` : '-',
+    reason: '-',
+    refunded: false,
+  }))
   const [searchTerm, setSearchTerm] = useState('')
-  const [bookings, setBookings] = useState(cancelledBookingsData)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
@@ -56,6 +65,7 @@ export default function CancelledBookings() {
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Cancelled Bookings</h1>

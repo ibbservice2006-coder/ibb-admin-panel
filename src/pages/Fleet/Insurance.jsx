@@ -237,7 +237,7 @@ export default function Insurance() {
             <TrendingUp className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600"> > > >฿{(stats.totalCoverage / 1000000).toFixed(0)}M</div>
+            <div className="text-2xl font-bold text-purple-600">฿{(stats.totalCoverage / 1000000).toFixed(0)}M</div>
             <p className="text-xs text-muted-foreground">Total insured</p>
           </CardContent>
         </Card>

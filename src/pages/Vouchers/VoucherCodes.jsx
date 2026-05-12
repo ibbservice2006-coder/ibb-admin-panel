@@ -115,7 +115,7 @@ export default function VoucherCodes() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Voucher Codes</h1>
-            <p className="text-muted-foreground text-sm mt-0.5"> >Create and manage all Voucher Codes</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Create and manage all Voucher Codes</p>
           </div>
         </div>
         <div className="flex gap-2">

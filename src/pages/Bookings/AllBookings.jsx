@@ -24,19 +24,8 @@ import {
   MapPin, Users, DollarSign, Clock, TrendingUp, TrendingDown, RefreshCw, Phone
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-const bookingsData = [
-  { id: 'IBB-2026-4521', customer: 'Wang Wei', phone: '+86-138-0013-8000', pickup: 'BKK Suvarnabhumi Airport', dropoff: 'Pattaya Beach Hotel', status: 'confirmed', date: '2026-03-25', time: '10:00', driver: 'Somchai P.', vehicle: 'IBB-VAN-012', passengers: 3, fare: 2400, currency: 'THB', duration: '90 min', rating: null, source: 'Direct' },
-  { id: 'IBB-2026-4520', customer: 'Tanaka Hiroshi', phone: '+81-90-1234-5678', pickup: 'Hua Hin Town', dropoff: 'BKK Suvarnabhumi Airport', status: 'in_progress', date: '2026-03-25', time: '09:30', driver: 'Preecha W.', vehicle: 'IBB-VAN-008', passengers: 2, fare: 3200, currency: 'THB', duration: '180 min', rating: null, source: 'Agoda' },
-  { id: 'IBB-2026-4519', customer: 'Sarah Johnson', phone: '+1-310-555-0192', pickup: 'Pattaya Hilton', dropoff: 'BKK Suvarnabhumi Airport', status: 'completed', date: '2026-03-25', time: '08:15', driver: 'Krit T.', vehicle: 'IBB-VAN-005', passengers: 1, fare: 2800, currency: 'THB', duration: '90 min', rating: 5.0, source: 'Klook' },
-  { id: 'IBB-2026-4518', customer: 'Li Mingzhu', phone: '+86-139-0013-9000', pickup: 'BKK Don Mueang Airport', dropoff: 'Hua Hin Marriott', status: 'confirmed', date: '2026-03-25', time: '08:00', driver: 'Arthit S.', vehicle: 'IBB-VAN-015', passengers: 4, fare: 4500, currency: 'THB', duration: '180 min', rating: null, source: 'WeChat' },
-  { id: 'IBB-2026-4517', customer: 'Somchai Rattana', phone: '+66-81-234-5678', pickup: 'Phuket Airport', dropoff: 'Krabi Ao Nang', status: 'pending', date: '2026-03-25', time: '07:45', driver: 'Unassigned', vehicle: 'TBD', passengers: 2, fare: 1800, currency: 'THB', duration: '120 min', rating: null, source: 'Direct' },
-  { id: 'IBB-2026-4516', customer: 'Park Jiyeon', phone: '+82-10-1234-5678', pickup: 'BKK Suvarnabhumi Airport', dropoff: 'Pattaya Dusit Thani', status: 'completed', date: '2026-03-24', time: '20:30', driver: 'Nattapong K.', vehicle: 'IBB-VAN-003', passengers: 2, fare: 2400, currency: 'THB', duration: '90 min', rating: 4.8, source: 'Booking.com' },
-  { id: 'IBB-2026-4515', customer: 'Michael Brown', phone: '+44-7700-900123', pickup: 'Hua Hin Sheraton', dropoff: 'BKK Suvarnabhumi Airport', status: 'cancelled', date: '2026-03-24', time: '15:00', driver: 'N/A', vehicle: 'N/A', passengers: 3, fare: 3200, currency: 'THB', duration: '180 min', rating: null, source: 'Direct' },
-  { id: 'IBB-2026-4514', customer: 'Chen Xiaoming', phone: '+86-137-0013-7000', pickup: 'BKK Suvarnabhumi Airport', dropoff: 'Pattaya Grand Hotel', status: 'completed', date: '2026-03-24', time: '14:00', driver: 'Somchai P.', vehicle: 'IBB-VAN-012', passengers: 6, fare: 4800, currency: 'THB', duration: '90 min', rating: 4.9, source: 'Ctrip' },
-  { id: 'IBB-2026-4513', customer: 'Yuki Tanaka', phone: '+81-80-9876-5432', pickup: 'Pattaya Centara', dropoff: 'BKK Don Mueang Airport', status: 'completed', date: '2026-03-24', time: '06:00', driver: 'Preecha W.', vehicle: 'IBB-VAN-008', passengers: 2, fare: 2600, currency: 'THB', duration: '90 min', rating: 5.0, source: 'Klook' },
-  { id: 'IBB-2026-4512', customer: 'Nattaya Wongprasert', phone: '+66-89-876-5432', pickup: 'BKK Suvarnabhumi Airport', dropoff: 'Hua Hin Anantara', status: 'completed', date: '2026-03-23', time: '22:00', driver: 'Arthit S.', vehicle: 'IBB-VAN-015', passengers: 4, fare: 4500, currency: 'THB', duration: '180 min', rating: 4.7, source: 'Direct' },
-]
+import { useBookings, useCancelBooking } from '@/hooks/useBookings'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 const statusColors = {
   confirmed: 'bg-blue-100 text-blue-800',
@@ -57,7 +46,6 @@ const emptyNewBooking = {
 }
 
 export default function AllBookings() {
-  const [bookings, setBookings] = useState(bookingsData)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sourceFilter, setSourceFilter] = useState('all')
@@ -69,6 +57,10 @@ export default function AllBookings() {
   const [newBooking, setNewBooking] = useState(emptyNewBooking)
   const { toast } = useToast()
 
+  const { data, isLoading, isError, refetch } = useBookings()
+  const bookings = data?.data ?? []
+  const cancelBooking = useCancelBooking()
+
   const filtered = bookings.filter(b => {
     const matchSearch = b.id.toLowerCase().includes(search.toLowerCase()) ||
       b.customer.toLowerCase().includes(search.toLowerCase()) ||
@@ -79,17 +71,19 @@ export default function AllBookings() {
     return matchSearch && matchStatus && matchSource
   })
 
+  const today = new Date().toISOString().slice(0, 10)
   const stats = [
-    { title: 'Total Bookings', value: bookings.length, icon: Calendar, bgColor: 'bg-blue-100', iconColor: 'text-blue-600' },
+    { title: 'Total Bookings', value: data?.total ?? bookings.length, icon: Calendar, bgColor: 'bg-blue-100', iconColor: 'text-blue-600' },
     { title: 'Confirmed', value: bookings.filter(b => b.status === 'confirmed').length, icon: TrendingUp, bgColor: 'bg-green-100', iconColor: 'text-green-600' },
     { title: 'In Progress', value: bookings.filter(b => b.status === 'in_progress').length, icon: Clock, bgColor: 'bg-yellow-100', iconColor: 'text-yellow-600' },
-    { title: 'Revenue Today', value: '฿' + bookings.filter(b => b.date === '2026-03-25').reduce((sum, b) => sum + b.fare, 0).toLocaleString(), icon: DollarSign, bgColor: 'bg-purple-100', iconColor: 'text-purple-600' },
+    { title: 'Revenue Today', value: '฿' + bookings.filter(b => b.date === today).reduce((sum, b) => sum + (b.fare || 0), 0).toLocaleString(), icon: DollarSign, bgColor: 'bg-purple-100', iconColor: 'text-purple-600' },
   ]
 
   const handleDelete = () => {
-    setBookings(bookings.filter(b => b.id !== selectedBooking.id))
-    setIsDeleteOpen(false)
-    toast({ title: 'Booking Cancelled', description: `Booking ${selectedBooking.id} has been cancelled.`, variant: 'destructive' })
+    cancelBooking.mutate(
+      { id: selectedBooking._uuid, reason: 'Cancelled by admin' },
+      { onSuccess: () => setIsDeleteOpen(false) }
+    )
   }
 
   const handleExport = () => {
@@ -108,33 +102,15 @@ export default function AllBookings() {
       toast({ title: 'Please Complete All Fields', description: 'Customer Name, Pickup, Drop-off, and Date Required', variant: 'destructive' })
       return
     }
-    const newId = `IBB-2026-${4522 + bookings.length - 10}`
-    const created = {
-      id: newId,
-      customer: newBooking.customer,
-      phone: newBooking.phone || '-',
-      pickup: newBooking.pickup,
-      dropoff: newBooking.dropoff,
-      status: 'pending',
-      date: newBooking.date,
-      time: newBooking.time || '00:00',
-      driver: 'Unassigned',
-      vehicle: 'TBD',
-      passengers: parseInt(newBooking.passengers) || 1,
-      fare: parseInt(newBooking.fare) || 0,
-      currency: 'THB',
-      duration: '-',
-      rating: null,
-      source: newBooking.source,
-    }
-    setBookings([created, ...bookings])
+    // Phase 2: POST to /admin/bookings when admin-create endpoint is ready
+    toast({ title: 'Coming Soon', description: 'Admin booking creation will be available in Phase 2' })
     setIsNewOpen(false)
     setNewBooking(emptyNewBooking)
-    toast({ title: 'Booking Created!', description: `Booking ${newId} created successfully` })
   }
 
   return (
     <div className="p-6 space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">All Bookings</h1>
@@ -216,7 +192,9 @@ export default function AllBookings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.length === 0 ? (
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Loading bookings...</TableCell></TableRow>
+                ) : filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No bookings found</TableCell></TableRow>
                 ) : filtered.map((b, idx) => (
                   <TableRow key={b.id}>

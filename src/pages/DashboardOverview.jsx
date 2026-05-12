@@ -25,59 +25,7 @@ import {
   UserCheck
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-// Mock data for dashboard
-const statsData = [
-  {
-    title: 'Total Bookings Today',
-    value: '128',
-    change: '+12%',
-    trend: 'up',
-    icon: Calendar,
-    color: 'text-blue-600',
-    bg: 'bg-blue-50'
-  },
-  {
-    title: 'Active Drivers',
-    value: '142',
-    change: '+3.2%',
-    trend: 'up',
-    icon: Users,
-    color: 'text-green-600',
-    bg: 'bg-green-50'
-  },
-  {
-    title: 'Revenue Today',
-    value: '฿4,250',
-    change: '+18.4%',
-    trend: 'up',
-    icon: DollarSign,
-    color: 'text-purple-600',
-    bg: 'bg-purple-50'
-  },
-  {
-    title: 'Avg. Rating',
-    value: '4.8',
-    change: '-0.2%',
-    trend: 'down',
-    icon: Star,
-    color: 'text-yellow-600',
-    bg: 'bg-yellow-50'
-  }
-]
-
-const recentBookings = [
-  { id: 'BK-10234', customer: 'Anan S.', route: 'Airport → City Center', status: 'Pending', time: '10:30', amount: '฿450' },
-  { id: 'BK-10235', customer: 'Somsak P.', route: 'Central Station → Hotel', status: 'In Progress', time: '11:15', amount: '฿320' },
-  { id: 'BK-10236', customer: 'Wichai K.', route: 'Mall → Airport', status: 'Completed', time: '09:45', amount: '฿550' },
-  { id: 'BK-10237', customer: 'Niran T.', route: 'Hotel → Beach', status: 'Cancelled', time: '08:30', amount: '฿800' }
-]
-
-const vehicleStatus = [
-  { type: 'Van', total: 45, active: 38, maintenance: 4, offline: 3, color: 'bg-sky-400' },
-  { type: 'Bus', total: 12, active: 10, maintenance: 1, offline: 1, color: 'bg-teal-400' },
-  { type: 'Car', total: 25, active: 22, maintenance: 2, offline: 1, color: 'bg-indigo-400' }
-]
+import { useDashboardStats } from '@/hooks/useDashboard'
 
 const getStatusBadge = (status) => {
   switch (status) {
@@ -91,6 +39,61 @@ const getStatusBadge = (status) => {
 
 export default function DashboardOverview() {
   const { toast } = useToast()
+  const { data: statsRaw } = useDashboardStats()
+
+  const statsData = [
+    {
+      title: 'Total Bookings Today',
+      value: statsRaw?.today_bookings ?? '-',
+      change: '+12%',
+      trend: 'up',
+      icon: Calendar,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50'
+    },
+    {
+      title: 'Active Drivers',
+      value: statsRaw?.active_drivers ?? '-',
+      change: '+3.2%',
+      trend: 'up',
+      icon: Users,
+      color: 'text-green-600',
+      bg: 'bg-green-50'
+    },
+    {
+      title: 'Revenue Today',
+      value: statsRaw ? '฿' + Number(statsRaw.revenue_today_thb ?? 0).toLocaleString() : '-',
+      change: '+18.4%',
+      trend: 'up',
+      icon: DollarSign,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50'
+    },
+    {
+      title: 'Avg. Rating',
+      value: statsRaw?.avg_rating ?? '-',
+      change: '-0.2%',
+      trend: 'down',
+      icon: Star,
+      color: 'text-yellow-600',
+      bg: 'bg-yellow-50'
+    }
+  ]
+
+  const recentBookings = (statsRaw?.recent_bookings ?? []).map(b => ({
+    id: b.public_id ?? b.id,
+    customer: b.customer_name ?? '-',
+    route: `${b.pickup_location ?? '-'} → ${b.dropoff_location ?? '-'}`,
+    status: b.status ? (b.status.charAt(0).toUpperCase() + b.status.slice(1).replace('_', ' ')) : '-',
+    time: b.pickup_datetime?.split('T')[1]?.slice(0, 5) ?? '-',
+    amount: '฿' + Number(b.final_price_thb ?? 0).toLocaleString(),
+  }))
+
+  const vehicleStatus = statsRaw?.fleet_status ?? [
+    { type: 'Van', total: 0, active: 0, maintenance: 0, offline: 0, color: 'bg-sky-400' },
+    { type: 'Bus', total: 0, active: 0, maintenance: 0, offline: 0, color: 'bg-teal-400' },
+    { type: 'Car', total: 0, active: 0, maintenance: 0, offline: 0, color: 'bg-indigo-400' },
+  ]
   const handleExport = () => {
     const rows = [['#', 'Data', 'Value', 'Date']]
     const csv = rows.map(r => r.join(',')).join('\n')

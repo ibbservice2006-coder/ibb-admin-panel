@@ -8,16 +8,30 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Search, Filter, Download, RefreshCw, Navigation, MapPin, Clock, User, Phone, MessageSquare, Eye, CheckCircle2, Zap, Pause } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-const inProgressBookingsData = [
-  { id: 'BK-2024-002', customer: 'Sarah Johnson', phone: '+66-8-2345-6789', pickup: 'Central World', dropoff: 'Luxury Hotel', driver: 'Arun K.', vehicle: 'CAR-12', passengers: 2, fare: '฿320', startTime: '2024-03-22 10:15', status: 'in-progress', progress: 65, remainingTime: '10 min', remainingDistance: '5.2 km' },
-  { id: 'BK-2024-011', customer: 'Peter Parker', phone: '+66-8-1111-2222', pickup: 'Grand Palace', dropoff: 'Wat Arun', driver: 'Niran T.', vehicle: 'VAN-08', passengers: 4, fare: '฿420', startTime: '2024-03-22 10:30', status: 'in-progress', progress: 30, remainingTime: '18 min', remainingDistance: '8.4 km' },
-]
+import { useBookings } from '@/hooks/useBookings'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 export default function InProgressBookings() {
   const { toast } = useToast()
+  const { data, isLoading, isError, refetch } = useBookings({ status: 'in_progress' })
+  const bookings = (data?.data ?? []).map(b => ({
+    id: b.id,
+    _uuid: b._uuid,
+    customer: b.customer,
+    phone: b.phone,
+    pickup: b.pickup,
+    dropoff: b.dropoff,
+    driver: b.driver,
+    vehicle: b.vehicle,
+    passengers: b.passengers,
+    fare: `฿${(b.fare || 0).toLocaleString()}`,
+    startTime: b.date && b.time ? `${b.date} ${b.time}` : '-',
+    status: 'in-progress',
+    progress: 50,
+    remainingTime: '-',
+    remainingDistance: '-',
+  }))
   const [searchTerm, setSearchTerm] = useState('')
-  const [bookings, setBookings] = useState(inProgressBookingsData)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showCompleteDialog, setShowCompleteDialog] = useState(false)
@@ -49,6 +63,7 @@ export default function InProgressBookings() {
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">In-Progress Bookings</h1>

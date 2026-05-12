@@ -10,6 +10,7 @@ import {
   Search, RefreshCw, Download, MapPin, Route, Car, Bus,
   ChevronLeft, ChevronRight, Eye, Edit
 } from 'lucide-react'
+import { useRoutes } from '@/hooks/useRoutes'
 
 // ===== REAL ROUTE DATA FROM ibbservice.com/pricing =====
 
@@ -243,6 +244,7 @@ const zoneColor = (zone) => {
 }
 
 export default function AllRoutes() {
+  const { data: routesData, refetch: refetchRoutes } = useRoutes()
   const [vehicleTab, setVehicleTab] = useState('car')
   const [searchTerm, setSearchTerm] = useState('')
   const [zoneFilter, setZoneFilter] = useState('all')
@@ -286,7 +288,7 @@ export default function AllRoutes() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(r => setTimeout(r, 600))
+    await refetchRoutes()
     setIsRefreshing(false)
     toast({ title: 'Refreshed', description: 'Route data updated' })
   }

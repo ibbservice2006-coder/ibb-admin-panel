@@ -5,23 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { RefreshCw, Search, Edit, ToggleLeft, ToggleRight, Globe, DollarSign, TrendingUp, CheckCircle } from 'lucide-react'
-
-const currencies = [
-  { code: 'THB', name: 'Thai Baht',           symbol: '฿',  flag: '🇹🇭', region: 'Southeast Asia', base: true,  active: true,  rate: 1.0000,    type: 'fiat' },
-  { code: 'USD', name: 'US Dollar',            symbol: '$',  flag: '🇺🇸', region: 'Global',         base: false, active: true,  rate: 0.02778,   type: 'fiat' },
-  { code: 'EUR', name: 'Euro',                 symbol: '€',  flag: '🇪🇺', region: 'Europe',         base: false, active: true,  rate: 0.02564,   type: 'fiat' },
-  { code: 'GBP', name: 'British Pound',        symbol: '£',  flag: '🇬🇧', region: 'Europe',         base: false, active: true,  rate: 0.02198,   type: 'fiat' },
-  { code: 'CNY', name: 'Chinese Yuan',         symbol: '¥',  flag: '🇨🇳', region: 'Asia',           base: false, active: true,  rate: 0.20134,   type: 'fiat' },
-  { code: 'JPY', name: 'Japanese Yen',         symbol: '¥',  flag: '🇯🇵', region: 'Asia',           base: false, active: true,  rate: 4.21000,   type: 'fiat' },
-  { code: 'IDR', name: 'Indonesian Rupiah',    symbol: 'Rp', flag: '🇮🇩', region: 'Southeast Asia', base: false, active: true,  rate: 435.6000,  type: 'fiat' },
-  { code: 'SGD', name: 'Singapore Dollar',     symbol: 'S$', flag: '🇸🇬', region: 'Southeast Asia', base: false, active: true,  rate: 0.03752,   type: 'fiat' },
-  { code: 'BND', name: 'Brunei Dollar',        symbol: 'B$', flag: '🇧🇳', region: 'Southeast Asia', base: false, active: true,  rate: 0.03752,   type: 'fiat' },
-  { code: 'AED', name: 'UAE Dirham',           symbol: 'د.إ',flag: '🇦🇪', region: 'Middle East',    base: false, active: true,  rate: 0.10204,   type: 'fiat' },
-  { code: 'RUB', name: 'Russian Ruble',        symbol: '₽',  flag: '🇷🇺', region: 'Europe/Asia',    base: false, active: true,  rate: 2.56000,   type: 'fiat' },
-  { code: 'SAR', name: 'Saudi Riyal',          symbol: '﷼',  flag: '🇸🇦', region: 'Middle East',    base: false, active: true,  rate: 0.10417,   type: 'fiat' },
-  { code: 'OMR', name: 'Omani Rial',           symbol: 'ر.ع',flag: '🇴🇲', region: 'Middle East',    base: false, active: true,  rate: 0.01070,   type: 'fiat' },
-  { code: 'INR', name: 'Indian Rupee',         symbol: '₹',  flag: '🇮🇳', region: 'Asia',           base: false, active: true,  rate: 2.31000,   type: 'fiat' },
-]
+import { useCurrencies, useUpdateCurrencyRate } from '@/hooks/usePricing'
 
 const regionColors = {
   'Southeast Asia': 'bg-blue-100 text-blue-700',
@@ -34,22 +18,37 @@ const regionColors = {
 
 export default function CurrencyList() {
   const { toast } = useToast()
+  const { data: currData, isLoading, refetch } = useCurrencies()
+  const updateRate = useUpdateCurrencyRate()
+
+  // Normalize API currency data to the shape the UI expects
+  const apiCurrencies = (currData?.data ?? []).map(c => ({
+    code: c.code?.trim(),
+    name: c.name ?? c.code,
+    symbol: c.symbol ?? c.code,
+    flag: c.flag ?? '',
+    region: c.region ?? 'Global',
+    base: c.code?.trim() === 'THB',
+    active: c.is_active ?? true,
+    rate: parseFloat(c.rate_from_thb ?? 1),
+    type: 'fiat',
+  }))
+
   const [isRefreshing, setIsRefreshing] = useState(false)
   const handleRefresh = () => {
     setIsRefreshing(true)
-    setTimeout(() => {
+    refetch().finally(() => {
       setIsRefreshing(false)
       toast({ title: 'Refreshed', description: 'Latest data loaded' })
-    }, 800)
+    })
   }
   const [search, setSearch] = useState('')
   const [regionFilter, setRegionFilter] = useState('all')
-  const [currencies_, setCurrencies] = useState(currencies)
   const [editCurrency, setEditCurrency] = useState(null)
 
-  const regions = ['all', ...Array.from(new Set(currencies.map(c => c.region)))]
+  const regions = ['all', ...Array.from(new Set(apiCurrencies.map(c => c.region)))]
 
-  const filtered = currencies_.filter(c => {
+  const filtered = apiCurrencies.filter(c => {
     const matchSearch = c.code.toLowerCase().includes(search.toLowerCase()) ||
                         c.name.toLowerCase().includes(search.toLowerCase())
     const matchRegion = regionFilter === 'all' || c.region === regionFilter
@@ -57,13 +56,14 @@ export default function CurrencyList() {
   })
 
   const toggleActive = (code) => {
-    setCurrencies(prev => prev.map(c => c.code === code && !c.base ? { ...c, active: !c.active } : c))
+    // Phase 2: toggle active via API
+    toast({ title: 'Coming Soon', description: 'Toggle currency status via API in Phase 2' })
   }
 
   const stats = {
-    total: currencies_.length,
-    active: currencies_.filter(c => c.active).length,
-    regions: new Set(currencies_.map(c => c.region)).size,
+    total: apiCurrencies.length,
+    active: apiCurrencies.filter(c => c.active).length,
+    regions: new Set(apiCurrencies.map(c => c.region)).size,
   }
 
   return (
@@ -227,7 +227,7 @@ export default function CurrencyList() {
             <div className="flex gap-2 mt-6 justify-end">
               <Button size="sm" variant="outline" onClick={() => setEditCurrency(null)}>Cancel</Button>
               <Button size="sm" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => {
-                setCurrencies(prev => prev.map(c => c.code === editCurrency.code ? editCurrency : c))
+                updateRate.mutate({ code: editCurrency.code, rate_from_thb: editCurrency.rate })
                 setEditCurrency(null)
               }}>Save Changes</Button>
             </div>

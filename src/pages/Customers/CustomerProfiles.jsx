@@ -21,6 +21,8 @@ import {
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useCustomers } from '@/hooks/useCustomers'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 // Mock customer profiles data
 const customersData = [
@@ -100,8 +102,22 @@ const membershipColors = {
 
 export default function CustomerProfiles() {
   const { toast } = useToast()
+  const { data: customersApiData, isError, refetch } = useCustomers()
+  const apiCustomers = (customersApiData?.data ?? []).map(c => ({
+    id: c.public_id ?? c.id,
+    name: c.customer_name ?? c.name ?? '-',
+    email: c.customer_email ?? c.email ?? '-',
+    phone: c.customer_phone ?? c.phone ?? '-',
+    joinDate: c.created_at?.split('T')[0] ?? '-',
+    totalTrips: c.total_trips ?? 0,
+    totalSpent: c.total_spent ?? 0,
+    membershipLevel: c.membership ?? 'Standard',
+    status: c.status ?? 'active',
+    rating: parseFloat(c.rating ?? 0),
+    lastTrip: c.last_trip_date?.split('T')[0] ?? '-',
+  }))
+  const customers = apiCustomers
   const [searchTerm, setSearchTerm] = useState('')
-  const [customers, setCustomers] = useState(customersData)
   const [selectedCustomer, setSelectedCustomer] = useState(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
@@ -113,14 +129,14 @@ export default function CustomerProfiles() {
   )
 
   const handleRefresh = async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await refetch()
     toast({ title: 'Data Refreshed', description: 'Customer profiles have been updated.' })
   }
 
   // Statistics
   const activeCustomers = customers.filter(c => c.status === 'active').length
   const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0)
-  const avgSpent = Math.round(totalRevenue / customers.length)
+  const avgSpent = customers.length > 0 ? Math.round(totalRevenue / customers.length) : 0
 
   const renderStars = (rating) => {
     return Array.from({ length: 5 }).map((_, i) => (
@@ -133,6 +149,7 @@ export default function CustomerProfiles() {
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

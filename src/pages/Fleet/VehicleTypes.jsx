@@ -463,7 +463,7 @@ export default function VehicleTypes() {
               </div>
               <div>
                 <Label className="text-muted-foreground">Base Price</Label>
-                <p className="font-medium"> > > >฿{selectedType.basePrice}</p>
+                <p className="font-medium">฿{selectedType.basePrice}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Price per km</Label>

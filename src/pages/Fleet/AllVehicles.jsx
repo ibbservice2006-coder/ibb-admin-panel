@@ -14,36 +14,7 @@ import {
   Truck, TrendingUp, TrendingDown, BarChart3, ArrowUpDown, ChevronLeft,
   ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, Download, Filter, X as XIcon
 } from 'lucide-react'
-
-// Mock data generator for vehicles
-const generateMockVehicles = () => {
-  const makes = ['Toyota', 'Honda', 'Nissan', 'Hyundai', 'Kia', 'BMW', 'Mercedes']
-  const models = ['Camry', 'Accord', 'Altima', 'Elantra', 'Sportage', '3 Series', 'C-Class']
-  const statuses = ['available', 'in_use', 'maintenance', 'offline']
-  const zones = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E']
-
-  return Array.from({ length: 25 }, (_, index) => ({
-    id: index + 1,
-    licensePlate: `IBB-${String(index + 1).padStart(4, '0')}`,
-    make: makes[Math.floor(Math.random() * makes.length)],
-    model: models[Math.floor(Math.random() * models.length)],
-    year: 2020 + Math.floor(Math.random() * 4),
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    mileage: Math.floor(Math.random() * 150000) + 5000,
-    driver: ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Wilson', 'Unassigned'][Math.floor(Math.random() * 5)],
-    location: zones[Math.floor(Math.random() * zones.length)],
-    gpsCoords: `${(13.7 + Math.random() * 0.1).toFixed(4)}, ${(100.5 + Math.random() * 0.1).toFixed(4)}`,
-    fuelLevel: Math.floor(Math.random() * 100),
-    lastService: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    nextService: new Date(Date.now() + Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    registrationExpiry: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    insuranceExpiry: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    color: ['White', 'Black', 'Silver', 'Blue', 'Red'][Math.floor(Math.random() * 5)],
-    capacity: [4, 5, 6, 7, 8][Math.floor(Math.random() * 5)]
-  }))
-}
-
-const mockVehicles = generateMockVehicles()
+import { useVehicles, useCreateVehicle, useUpdateVehicle } from '@/hooks/useFleet'
 
 const getStatusBadge = (status) => {
   const badges = {
@@ -56,7 +27,30 @@ const getStatusBadge = (status) => {
 }
 
 export default function AllVehicles() {
-  const [vehicles, setVehicles] = useState(mockVehicles)
+  const { data: vehiclesData, isLoading, refetch } = useVehicles()
+  const createVehicle = useCreateVehicle()
+  const updateVehicle = useUpdateVehicle()
+
+  const apiVehicles = (vehiclesData?.data ?? []).map(v => ({
+    id: v.id,
+    licensePlate: v.license_plate ?? v.licensePlate ?? '-',
+    make: v.make ?? '-',
+    model: v.model ?? '-',
+    year: v.year ?? '-',
+    status: v.status ?? 'available',
+    mileage: v.mileage ?? 0,
+    driver: v.driver_name ?? 'Unassigned',
+    location: '-',
+    gpsCoords: '-',
+    fuelLevel: 0,
+    lastService: v.last_service_date ?? '-',
+    nextService: v.next_service_date ?? '-',
+    registrationExpiry: v.registration_expiry ?? '-',
+    insuranceExpiry: v.insurance_expiry ?? '-',
+    color: v.color ?? '-',
+    capacity: v.capacity ?? v.passenger_capacity ?? '-',
+  }))
+
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedVehicles, setSelectedVehicles] = useState([])
@@ -79,7 +73,7 @@ export default function AllVehicles() {
   const { toast } = useToast()
 
   // Filter and search
-  const filteredVehicles = vehicles.filter(vehicle => {
+  const filteredVehicles = apiVehicles.filter(vehicle => {
     const matchesSearch = vehicle.licensePlate.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -111,17 +105,18 @@ export default function AllVehicles() {
 
   // Statistics
   const stats = {
-    total: vehicles.length,
-    available: vehicles.filter(v => v.status === 'available').length,
-    inUse: vehicles.filter(v => v.status === 'in_use').length,
-    maintenance: vehicles.filter(v => v.status === 'maintenance').length
+    total: isLoading ? '...' : (vehiclesData?.total ?? apiVehicles.length),
+    available: apiVehicles.filter(v => v.status === 'available').length,
+    inUse: apiVehicles.filter(v => v.status === 'in_use').length,
+    maintenance: apiVehicles.filter(v => v.status === 'maintenance').length
   }
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Refreshed', description: 'Vehicle data updated' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Vehicle data updated' })
+    })
   }
 
   const handleViewDetails = (vehicle) => {
@@ -140,9 +135,14 @@ export default function AllVehicles() {
   }
 
   const handleConfirmDelete = () => {
-    setVehicles(vehicles.filter(v => v.id !== selectedVehicle.id))
-    setIsDeleteDialogOpen(false)
-    toast({ title: 'Deleted', description: `Vehicle ${selectedVehicle.licensePlate} removed` })
+    updateVehicle.mutate(
+      { id: selectedVehicle.id, data: { status: 'inactive' } },
+      { onSuccess: () => {
+          setIsDeleteDialogOpen(false)
+          toast({ title: 'Deleted', description: `Vehicle ${selectedVehicle.licensePlate} removed` })
+        }
+      }
+    )
   }
 
   const handleSelectAll = (checked) => {
@@ -540,10 +540,21 @@ export default function AllVehicles() {
             <Button size="sm" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
             <Button size="sm" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => {
               if (!newVehicle.licensePlate) { toast({ title: 'Please enter vehicle registration', variant: 'destructive' }); return }
-              setVehicles([{ id: Date.now(), licensePlate: newVehicle.licensePlate, make: newVehicle.make, model: newVehicle.model, year: parseInt(newVehicle.year)||2024, color: newVehicle.color, capacity: parseInt(newVehicle.capacity)||5, status: newVehicle.status, mileage: 0, driver: 'Unassigned', location: 'Zone A', gpsCoords: '13.7563, 100.5018', fuelLevel: 100, lastService: new Date().toISOString().split('T')[0], nextService: '-', registrationExpiry: '-', insuranceExpiry: '-' }, ...vehicles])
-              setIsAddOpen(false)
-              setNewVehicle({ licensePlate: '', make: 'Toyota', model: '', year: '2024', color: 'White', capacity: '5', status: 'available' })
-              toast({ title: 'Vehicle Added!', description: `${newVehicle.licensePlate} added successfully` })
+              createVehicle.mutate({
+                license_plate: newVehicle.licensePlate,
+                make: newVehicle.make,
+                model: newVehicle.model,
+                year: parseInt(newVehicle.year) || 2024,
+                color: newVehicle.color,
+                passenger_capacity: parseInt(newVehicle.capacity) || 5,
+                status: newVehicle.status,
+              }, {
+                onSuccess: () => {
+                  setIsAddOpen(false)
+                  setNewVehicle({ licensePlate: '', make: 'Toyota', model: '', year: '2024', color: 'White', capacity: '5', status: 'available' })
+                  toast({ title: 'Vehicle Added!', description: `${newVehicle.licensePlate} added successfully` })
+                }
+              })
             }}><Plus className="h-4 w-4 mr-2" />Add Vehicle</Button>
           </DialogFooter>
         </DialogContent>

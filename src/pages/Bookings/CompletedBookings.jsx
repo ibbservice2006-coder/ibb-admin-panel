@@ -8,17 +8,29 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Search, Filter, Download, RefreshCw, CheckCircle2, MapPin, Clock, Eye, Star, Receipt, RotateCcw, DollarSign } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-const completedBookingsData = [
-  { id: 'BK-2024-001', customer: 'John Doe', phone: '+66-8-1234-5678', pickup: 'Airport', dropoff: 'City Center', driver: 'Somchai P.', vehicle: 'VAN-012', passengers: 2, fare: '฿450', completedTime: '2024-03-22 09:45', duration: '35 min', rating: 5, distance: '18.5 km' },
-  { id: 'BK-2024-005', customer: 'Jane Smith', phone: '+66-8-5678-9012', pickup: 'Hotel', dropoff: 'Airport', driver: 'Preecha W.', vehicle: 'VAN-008', passengers: 1, fare: '฿380', completedTime: '2024-03-22 11:20', duration: '28 min', rating: 4, distance: '15.2 km' },
-  { id: 'BK-2024-009', customer: 'Tom Wilson', phone: '+66-8-9012-3456', pickup: 'Office', dropoff: 'Mall', driver: 'Krit T.', vehicle: 'CAR-005', passengers: 3, fare: '฿280', completedTime: '2024-03-22 13:10', duration: '22 min', rating: 5, distance: '11.8 km' },
-]
+import { useBookings } from '@/hooks/useBookings'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 export default function CompletedBookings() {
   const { toast } = useToast()
+  const { data, isLoading, isError, refetch } = useBookings({ status: 'completed' })
+  const bookings = (data?.data ?? []).map(b => ({
+    id: b.id,
+    _uuid: b._uuid,
+    customer: b.customer,
+    phone: b.phone,
+    pickup: b.pickup,
+    dropoff: b.dropoff,
+    driver: b.driver,
+    vehicle: b.vehicle,
+    passengers: b.passengers,
+    fare: `฿${(b.fare || 0).toLocaleString()}`,
+    completedTime: b.date && b.time ? `${b.date} ${b.time}` : '-',
+    duration: b.duration,
+    rating: b.rating,
+    distance: '-',
+  }))
   const [searchTerm, setSearchTerm] = useState('')
-  const [bookings] = useState(completedBookingsData)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
@@ -47,6 +59,7 @@ export default function CompletedBookings() {
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Completed Bookings</h1>

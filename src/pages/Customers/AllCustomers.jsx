@@ -14,40 +14,8 @@ import {
   ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, Download, Filter,
   Phone, Mail, Award, Calendar, DollarSign
 } from 'lucide-react'
-
-// Mock data generator for customers
-const generateMockCustomers = () => {
-  const statuses = ['active', 'inactive', 'suspended', 'vip']
-  const membershipLevels = ['Standard', 'Premium', 'VIP', 'VVIP']
-
-  return Array.from({ length: 25 }, (_, index) => ({
-    id: index + 1,
-    name: ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Wilson', 'Tom Brown', 'Lisa Anderson', 'David Lee', 'Emma Davis', 'Chris Martin', 'Sophie Taylor'][index % 10],
-    email: `customer${index + 1}@email.com`,
-    phone: `08${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`,
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    membershipLevel: membershipLevels[Math.floor(Math.random() * membershipLevels.length)],
-    joinDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    totalTrips: Math.floor(Math.random() * 500) + 10,
-    totalSpent: Math.floor(Math.random() * 500000) + 5000,
-    averageRating: (Math.random() * 2 + 3.5).toFixed(1),
-    lastTrip: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    walletBalance: Math.floor(Math.random() * 50000),
-    referralCode: `REF${String(index + 1).padStart(6, '0')}`,
-    referralCount: Math.floor(Math.random() * 10),
-    preferredPayment: ['Credit Card', 'Wallet', 'Bank Transfer'][Math.floor(Math.random() * 3)],
-    address: 'Bangkok, Thailand',
-    city: 'Bangkok',
-    country: 'Thailand',
-    zipCode: '10110',
-    emergencyContact: 'Emergency Contact Name',
-    emergencyPhone: '08XXXXXXXX',
-    verificationStatus: Math.random() > 0.2 ? 'Verified' : 'Pending',
-    documentVerified: Math.random() > 0.3
-  }))
-}
-
-const mockCustomers = generateMockCustomers()
+import { useCustomers, useUpdateCustomer } from '@/hooks/useCustomers'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 const getStatusBadge = (status) => {
   const badges = {
@@ -70,7 +38,35 @@ const getMembershipBadge = (level) => {
 }
 
 export default function AllCustomers() {
-  const [customers, setCustomers] = useState(mockCustomers)
+  const { data: customersData, isLoading, isError, refetch } = useCustomers()
+  const updateCustomer = useUpdateCustomer()
+  // Normalize API data to the shape this UI expects
+  const apiCustomers = (customersData?.data ?? []).map((c, index) => ({
+    id: c.id,
+    name: c.customer_name ?? c.name ?? '-',
+    email: c.customer_email ?? c.email ?? '-',
+    phone: c.customer_phone ?? c.phone ?? '-',
+    status: c.status ?? 'active',
+    membershipLevel: c.membership ?? 'Standard',
+    joinDate: c.created_at?.split('T')[0] ?? '-',
+    totalTrips: c.total_trips ?? 0,
+    totalSpent: c.total_spent ?? 0,
+    averageRating: c.average_rating ?? '0.0',
+    lastTrip: c.last_trip ?? '-',
+    walletBalance: c.wallet_balance ?? 0,
+    referralCode: `REF${String(index + 1).padStart(6, '0')}`,
+    referralCount: 0,
+    preferredPayment: 'N/A',
+    address: 'Bangkok, Thailand',
+    city: 'Bangkok',
+    country: 'Thailand',
+    zipCode: '10110',
+    emergencyContact: '-',
+    emergencyPhone: '-',
+    verificationStatus: 'Pending',
+    documentVerified: false,
+  }))
+  const [customers, setCustomers] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [membershipFilter, setMembershipFilter] = useState('all')
@@ -94,7 +90,7 @@ export default function AllCustomers() {
   const { toast } = useToast()
 
   // Filter and search
-  const filteredCustomers = customers.filter(customer => {
+  const filteredCustomers = apiCustomers.filter(customer => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          customer.phone.includes(searchTerm)
@@ -126,19 +122,20 @@ export default function AllCustomers() {
 
   // Statistics
   const stats = {
-    total: customers.length,
-    active: customers.filter(c => c.status === 'active').length,
-    vip: customers.filter(c => c.status === 'vip').length,
-    totalSpent: customers.reduce((sum, c) => sum + c.totalSpent, 0),
-    averageSpent: Math.round(customers.reduce((sum, c) => sum + c.totalSpent, 0) / customers.length),
-    totalTrips: customers.reduce((sum, c) => sum + c.totalTrips, 0)
+    total: customersData?.total ?? apiCustomers.length,
+    active: apiCustomers.filter(c => c.status === 'active').length,
+    vip: apiCustomers.filter(c => c.status === 'vip').length,
+    totalSpent: apiCustomers.reduce((sum, c) => sum + (c.totalSpent || 0), 0),
+    averageSpent: apiCustomers.length > 0 ? Math.round(apiCustomers.reduce((sum, c) => sum + (c.totalSpent || 0), 0) / apiCustomers.length) : 0,
+    totalTrips: apiCustomers.reduce((sum, c) => sum + (c.totalTrips || 0), 0)
   }
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Refreshed', description: 'Customer data updated' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Customer data updated' })
+    })
   }
 
   const handleViewDetails = (customer) => {
@@ -157,9 +154,10 @@ export default function AllCustomers() {
   }
 
   const handleConfirmDelete = () => {
-    setCustomers(customers.filter(c => c.id !== selectedCustomer.id))
+    // Phase 2: customer delete/deactivate API endpoint
+    updateCustomer.mutate({ id: selectedCustomer.id, data: { status: 'suspended' } })
     setIsDeleteDialogOpen(false)
-    toast({ title: 'Deleted', description: `Customer ${selectedCustomer.name} removed` })
+    toast({ title: 'Customer Suspended', description: `Customer ${selectedCustomer.name} has been suspended` })
   }
 
   const handleSelectAll = (checked) => {
@@ -180,6 +178,7 @@ export default function AllCustomers() {
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">All Customers</h1>

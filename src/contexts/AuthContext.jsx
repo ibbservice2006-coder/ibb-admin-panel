@@ -3,9 +3,18 @@ import { createContext, useContext, useState, useEffect } from 'react'
 const AuthContext = createContext(null)
 
 // Demo credentials
+// Role hierarchy: superadmin > admin > manager
 const DEMO_USERS = [
   {
     id: 1,
+    email: 'superadmin@ibbshuttle.com',
+    password: 'superadmin1234',
+    name: 'IBB Super Admin',
+    role: 'superadmin',
+    avatar: null,
+  },
+  {
+    id: 2,
     email: 'admin@ibbshuttle.com',
     password: 'admin1234',
     name: 'IBB Admin',
@@ -13,7 +22,7 @@ const DEMO_USERS = [
     avatar: null,
   },
   {
-    id: 2,
+    id: 3,
     email: 'manager@ibbshuttle.com',
     password: 'manager1234',
     name: 'IBB Manager',

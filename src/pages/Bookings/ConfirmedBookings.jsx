@@ -9,11 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Search, Filter, Download, RefreshCw, CheckCircle2, MapPin, Clock, Eye, UserPlus, Phone, X, DollarSign, Users } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-const confirmedBookingsData = [
-  { id: 'BK-2024-003', customer: 'Mike Chen', phone: '+66-8-3456-7890', pickup: 'Shopping Mall', dropoff: 'Beach Resort', passengers: 8, fare: '฿680', bookingTime: '2024-03-22 14:00', status: 'confirmed', notes: 'Large group, extra luggage' },
-  { id: 'BK-2024-008', customer: 'Anna Smith', phone: '+66-8-8901-2345', pickup: 'Office Tower A', dropoff: 'Residential Park', passengers: 1, fare: '฿250', bookingTime: '2024-03-22 15:30', status: 'confirmed', notes: '' },
-]
+import { useBookings, useCancelBooking } from '@/hooks/useBookings'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 const availableDrivers = [
   { id: 'D001', name: 'Somchai Panya', vehicle: 'IBB-VAN-012', rating: 4.9, trips: 1842 },
@@ -23,8 +20,22 @@ const availableDrivers = [
 
 export default function ConfirmedBookings() {
   const { toast } = useToast()
+  const { data, isLoading, isError, refetch } = useBookings({ status: 'confirmed' })
+  const cancelBooking = useCancelBooking()
+  const bookings = (data?.data ?? []).map(b => ({
+    id: b.id,
+    _uuid: b._uuid,
+    customer: b.customer,
+    phone: b.phone,
+    pickup: b.pickup,
+    dropoff: b.dropoff,
+    passengers: b.passengers,
+    fare: `฿${(b.fare || 0).toLocaleString()}`,
+    bookingTime: b.createdAt ? b.createdAt.replace('T', ' ').slice(0, 16) : '-',
+    status: 'confirmed',
+    notes: '',
+  }))
   const [searchTerm, setSearchTerm] = useState('')
-  const [bookings, setBookings] = useState(confirmedBookingsData)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [selectedDriver, setSelectedDriver] = useState('')
@@ -50,20 +61,22 @@ export default function ConfirmedBookings() {
   const handleAssignConfirm = () => {
     if (!selectedDriver) return
     const driver = availableDrivers.find(d => d.id === selectedDriver)
-    setBookings(prev => prev.filter(b => b.id !== selectedBooking.id))
+    // Phase 2: call assign driver API endpoint
     setShowAssignDialog(false)
     setSelectedDriver('')
     toast({ title: 'Driver Assigned', description: `${driver.name} assigned to ${selectedBooking.id}` })
   }
 
   const handleCancelConfirm = () => {
-    setBookings(prev => prev.filter(b => b.id !== selectedBooking.id))
-    setShowCancelDialog(false)
-    toast({ title: 'Booking Cancelled', description: `${selectedBooking.id} has been cancelled`, variant: 'destructive' })
+    cancelBooking.mutate(
+      { id: selectedBooking._uuid, reason: 'Cancelled by admin' },
+      { onSuccess: () => setShowCancelDialog(false) }
+    )
   }
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Confirmed Bookings</h1>

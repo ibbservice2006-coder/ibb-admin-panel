@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
+import { usePrices } from '@/hooks/usePricing'
 import { Search, RefreshCw, Download, Edit, Bus, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const busRoutes = [
@@ -75,6 +76,7 @@ const fp = (v) => v ? `฿${v.toLocaleString()}` : <span className="text-gray-30
 const PAGE_SIZE = 15
 
 export default function BusPricing() {
+  const { refetch } = usePrices()
   const [search, setSearch] = useState('')
   const [zone, setZone] = useState('All Zones')
   const [page, setPage] = useState(1)
@@ -83,10 +85,10 @@ export default function BusPricing() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const handleRefresh = () => {
     setIsRefreshing(true)
-    setTimeout(() => {
+    refetch().finally(() => {
       setIsRefreshing(false)
       toast({ title: 'Refreshed', description: 'Latest data loaded' })
-    }, 800)
+    })
   }
   const handleExport = () => {
     const rows = [['#', 'Data', 'Value', 'Date']]

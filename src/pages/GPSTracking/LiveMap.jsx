@@ -281,7 +281,7 @@ export default function LiveMap() {
           </CardHeader>
           <CardContent className="pb-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div><p className="text-muted-foreground text-xs"> >Driver</p><p className="font-medium">{selected.driver}</p></div>
+              <div><p className="text-muted-foreground text-xs">Driver</p><p className="font-medium">{selected.driver}</p></div>
               <div><p className="text-muted-foreground text-xs">Phone number</p>
                 <p className="font-medium flex items-center gap-1"><Phone className="h-3 w-3" />{selected.phone}</p>
               </div>

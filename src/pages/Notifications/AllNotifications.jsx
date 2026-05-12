@@ -92,7 +92,7 @@ export default function AllNotifications() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">All Notifications</h1>
-            <p className="text-muted-foreground text-sm mt-0.5"> >Centralized Notifications — Email, SMS, Push</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Centralized Notifications — Email, SMS, Push</p>
           </div>
         </div>
         <div className="flex gap-2">

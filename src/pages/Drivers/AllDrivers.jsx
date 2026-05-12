@@ -9,46 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
+import { useDrivers, useCreateDriver, useUpdateDriver } from '@/hooks/useFleet'
 import {
   Search, Plus, Edit, Trash2, Eye, MapPin, Users, Zap, AlertTriangle,
   Users as UsersIcon, TrendingUp, TrendingDown, BarChart3, ArrowUpDown, ChevronLeft,
   ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, Download, Filter, X as XIcon,
   Star, Phone, Mail, Award
 } from 'lucide-react'
-
-// Mock data generator for drivers
-const generateMockDrivers = () => {
-  const statuses = ['active', 'inactive', 'on_leave', 'suspended']
-  const ratings = [4.5, 4.8, 4.2, 4.9, 3.8, 4.6, 4.7, 4.3, 4.4, 4.1]
-
-  return Array.from({ length: 25 }, (_, index) => ({
-    id: index + 1,
-    name: ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Wilson', 'Tom Brown', 'Lisa Anderson', 'David Lee', 'Emma Davis', 'Chris Martin', 'Sophie Taylor'][index % 10],
-    email: `driver${index + 1}@ibb.com`,
-    phone: `08${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`,
-    licenseNumber: `DL-${String(index + 1).padStart(6, '0')}`,
-    licenseExpiry: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    joinDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    rating: ratings[Math.floor(Math.random() * ratings.length)],
-    totalTrips: Math.floor(Math.random() * 500) + 50,
-    totalEarnings: Math.floor(Math.random() * 500000) + 50000,
-    completionRate: Math.floor(Math.random() * 100) + 80,
-    cancelRate: Math.floor(Math.random() * 10),
-    documents: {
-      license: Math.random() > 0.3,
-      insurance: Math.random() > 0.2,
-      background: Math.random() > 0.1,
-      medical: Math.random() > 0.15
-    },
-    assignedVehicle: `IBB-${String(Math.floor(Math.random() * 100) + 1).padStart(4, '0')}`,
-    address: 'Bangkok, Thailand',
-    emergencyContact: 'Emergency Contact Name',
-    emergencyPhone: '08XXXXXXXX'
-  }))
-}
-
-const mockDrivers = generateMockDrivers()
 
 const getStatusBadge = (status) => {
   const badges = {
@@ -68,7 +35,31 @@ const getRatingColor = (rating) => {
 }
 
 export default function AllDrivers() {
-  const [drivers, setDrivers] = useState(mockDrivers)
+  const { data: driversData, isLoading, refetch } = useDrivers()
+  const createDriver = useCreateDriver()
+  const updateDriver = useUpdateDriver()
+
+  const apiDrivers = (driversData?.data ?? []).map(d => ({
+    id: d.id,
+    name: d.driver_name ?? d.name ?? '-',
+    email: d.email ?? '-',
+    phone: d.phone ?? d.phone_number ?? '-',
+    licenseNumber: d.license_number ?? '-',
+    licenseExpiry: d.license_expiry ?? '-',
+    status: d.status ?? 'active',
+    joinDate: d.created_at?.split('T')[0] ?? '-',
+    rating: parseFloat(d.rating ?? 0),
+    totalTrips: d.total_trips ?? 0,
+    totalEarnings: d.total_earnings ?? 0,
+    completionRate: d.completion_rate ?? 0,
+    cancelRate: d.cancel_rate ?? 0,
+    documents: { license: false, insurance: false, background: false, medical: false },
+    assignedVehicle: d.vehicle_license_plate ?? 'Unassigned',
+    address: d.address ?? 'Bangkok, Thailand',
+    emergencyContact: d.emergency_contact ?? '-',
+    emergencyPhone: d.emergency_phone ?? '-',
+  }))
+
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedDrivers, setSelectedDrivers] = useState([])
@@ -91,7 +82,7 @@ export default function AllDrivers() {
   const { toast } = useToast()
 
   // Filter and search
-  const filteredDrivers = drivers.filter(driver => {
+  const filteredDrivers = apiDrivers.filter(driver => {
     const matchesSearch = driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          driver.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          driver.phone.includes(searchTerm) ||
@@ -123,19 +114,20 @@ export default function AllDrivers() {
 
   // Statistics
   const stats = {
-    total: drivers.length,
-    active: drivers.filter(d => d.status === 'active').length,
-    inactive: drivers.filter(d => d.status === 'inactive').length,
-    onLeave: drivers.filter(d => d.status === 'on_leave').length,
-    averageRating: (drivers.reduce((sum, d) => sum + d.rating, 0) / drivers.length).toFixed(1),
-    totalEarnings: drivers.reduce((sum, d) => sum + d.totalEarnings, 0)
+    total: isLoading ? '...' : (driversData?.total ?? apiDrivers.length),
+    active: apiDrivers.filter(d => d.status === 'active').length,
+    inactive: apiDrivers.filter(d => d.status === 'inactive').length,
+    onLeave: apiDrivers.filter(d => d.status === 'on_leave').length,
+    averageRating: apiDrivers.length > 0 ? (apiDrivers.reduce((sum, d) => sum + d.rating, 0) / apiDrivers.length).toFixed(1) : '0.0',
+    totalEarnings: apiDrivers.reduce((sum, d) => sum + d.totalEarnings, 0)
   }
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Refreshed', description: 'Driver data updated' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Driver data updated' })
+    })
   }
 
   const handleViewDetails = (driver) => {
@@ -154,9 +146,14 @@ export default function AllDrivers() {
   }
 
   const handleConfirmDelete = () => {
-    setDrivers(drivers.filter(d => d.id !== selectedDriver.id))
-    setIsDeleteDialogOpen(false)
-    toast({ title: 'Deleted', description: `Driver ${selectedDriver.name} removed` })
+    updateDriver.mutate(
+      { id: selectedDriver.id, status: 'suspended' },
+      { onSuccess: () => {
+          setIsDeleteDialogOpen(false)
+          toast({ title: 'Deleted', description: `Driver ${selectedDriver.name} removed` })
+        }
+      }
+    )
   }
 
   const handleSelectAll = (checked) => {
@@ -570,10 +567,18 @@ export default function AllDrivers() {
             <Button size="sm" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
             <Button size="sm" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => {
               if (!newDriver.name || !newDriver.phone) { toast({ title: 'Please enter name and phone number', variant: 'destructive' }); return }
-              setDrivers([{ id: Date.now(), name: newDriver.name, phone: newDriver.phone, email: newDriver.email, licenseNumber: newDriver.licenseNumber || 'DL-NEW', licenseExpiry: '2027-12-31', status: newDriver.status, joinDate: new Date().toISOString().split('T')[0], rating: 0, totalTrips: 0, totalEarnings: 0, completionRate: 100, cancelRate: 0, documents: { license: false, insurance: false, background: false, medical: false }, assignedVehicle: 'Unassigned', address: 'Bangkok, Thailand', emergencyContact: '-', emergencyPhone: '-' }, ...drivers])
-              setIsAddOpen(false)
-              setNewDriver({ name: '', phone: '', email: '', licenseNumber: '', status: 'active' })
-              toast({ title: 'Driver Added!', description: `${newDriver.name} added to system successfully` })
+              createDriver.mutate({
+                driver_name: newDriver.name,
+                phone: newDriver.phone,
+                email: newDriver.email,
+                license_number: newDriver.licenseNumber,
+                status: newDriver.status,
+              }, {
+                onSuccess: () => {
+                  setIsAddOpen(false)
+                  setNewDriver({ name: '', phone: '', email: '', licenseNumber: '', status: 'active' })
+                }
+              })
             }}>Add Driver</Button>
           </DialogFooter>
         </DialogContent>

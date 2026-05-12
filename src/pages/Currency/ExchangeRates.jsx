@@ -3,25 +3,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { RefreshCw, TrendingUp, TrendingDown, ArrowRightLeft, Clock, Edit, Save, X } from 'lucide-react'
-
-const ratesData = [
-  { code: 'USD', name: 'US Dollar',         flag: '🇺🇸', rate: 36.02, prev: 35.87, updated: '2026-03-24 08:00' },
-  { code: 'EUR', name: 'Euro',              flag: '🇪🇺', rate: 39.01, prev: 39.45, updated: '2026-03-24 08:00' },
-  { code: 'GBP', name: 'British Pound',     flag: '🇬🇧', rate: 45.50, prev: 45.12, updated: '2026-03-24 08:00' },
-  { code: 'CNY', name: 'Chinese Yuan',      flag: '🇨🇳', rate: 4.97,  prev: 4.95,  updated: '2026-03-24 08:00' },
-  { code: 'JPY', name: 'Japanese Yen',      flag: '🇯🇵', rate: 0.2375,prev: 0.2401,updated: '2026-03-24 08:00' },
-  { code: 'IDR', name: 'Indonesian Rupiah', flag: '🇮🇩', rate: 0.0023,prev: 0.0022,updated: '2026-03-24 08:00' },
-  { code: 'SGD', name: 'Singapore Dollar',  flag: '🇸🇬', rate: 26.65, prev: 26.72, updated: '2026-03-24 08:00' },
-  { code: 'BND', name: 'Brunei Dollar',     flag: '🇧🇳', rate: 26.65, prev: 26.72, updated: '2026-03-24 08:00' },
-  { code: 'AED', name: 'UAE Dirham',        flag: '🇦🇪', rate: 9.81,  prev: 9.79,  updated: '2026-03-24 08:00' },
-  { code: 'RUB', name: 'Russian Ruble',     flag: '🇷🇺', rate: 0.391, prev: 0.388, updated: '2026-03-24 08:00' },
-  { code: 'SAR', name: 'Saudi Riyal',       flag: '🇸🇦', rate: 9.60,  prev: 9.58,  updated: '2026-03-24 08:00' },
-  { code: 'OMR', name: 'Omani Rial',        flag: '🇴🇲', rate: 93.50, prev: 93.20, updated: '2026-03-24 08:00' },
-  { code: 'INR', name: 'Indian Rupee',      flag: '🇮🇳', rate: 0.433, prev: 0.431, updated: '2026-03-24 08:00' },
-]
+import { useCurrencies, useUpdateCurrencyRate } from '@/hooks/usePricing'
 
 export default function ExchangeRates() {
-  const [rates, setRates] = useState(ratesData)
+  const { data: currData, isLoading, refetch } = useCurrencies()
+  const updateRate = useUpdateCurrencyRate()
+  // Normalize API data into the shape this UI expects (THB as base = rate 1, others = THB per unit)
+  const rates = (currData?.data ?? [])
+    .filter(c => c.code?.trim() !== 'THB')
+    .map(c => ({
+      code: c.code?.trim(),
+      name: c.name ?? c.code,
+      flag: c.flag ?? '',
+      // rate_from_thb = X per 1 THB, invert to get THB per 1 unit
+      rate: parseFloat(c.rate_from_thb) > 0 ? parseFloat((1 / c.rate_from_thb).toFixed(5)) : 0,
+      prev: parseFloat(c.rate_from_thb) > 0 ? parseFloat((1 / c.rate_from_thb).toFixed(5)) : 0,
+      updated: c.updated_at?.replace('T', ' ').slice(0, 16) ?? '-',
+    }))
   const [editRow, setEditRow] = useState(null)
   const [editVal, setEditVal] = useState('')
   const [converterAmt, setConverterAmt] = useState('1000')
@@ -30,11 +28,16 @@ export default function ExchangeRates() {
   const [lastSync, setLastSync] = useState('2026-03-24 08:00 GMT+7')
 
   const handleSync = () => {
+    refetch()
     setLastSync(new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }))
   }
 
   const saveEdit = (code) => {
-    setRates(prev => prev.map(r => r.code === code ? { ...r, prev: r.rate, rate: parseFloat(editVal) } : r))
+    const newThbRate = parseFloat(editVal)
+    if (newThbRate > 0) {
+      // Convert "THB per 1 unit" back to "units per 1 THB" for the API
+      updateRate.mutate({ code, rate_from_thb: 1 / newThbRate })
+    }
     setEditRow(null)
   }
 

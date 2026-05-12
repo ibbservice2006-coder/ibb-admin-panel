@@ -20,6 +20,8 @@ import {
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useDrivers } from '@/hooks/useFleet'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 // Mock driver status data
 const driverStatusData = [
@@ -99,8 +101,22 @@ const statusConfig = {
 
 export default function DriverStatus() {
   const { toast } = useToast()
+  const { data: driversData, isLoading, isError, refetch } = useDrivers()
+  const apiDrivers = (driversData?.data ?? []).map(d => ({
+    id: d.id,
+    name: d.driver_name ?? d.name ?? '-',
+    phone: d.phone ?? '-',
+    status: d.status === 'active' ? 'available' : (d.status ?? 'available'),
+    currentLocation: '-',
+    currentPassengers: 0,
+    rating: parseFloat(d.rating ?? 0),
+    trips: d.total_trips ?? 0,
+    earnings: `฿${(d.total_earnings ?? 0).toLocaleString()}`,
+    lastUpdate: '-',
+    vehicle: d.vehicle_license_plate ?? 'Unassigned',
+  }))
+  const drivers = apiDrivers
   const [searchTerm, setSearchTerm] = useState('')
-  const [drivers, setDrivers] = useState(driverStatusData)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedDriver, setSelectedDriver] = useState(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
@@ -113,9 +129,10 @@ export default function DriverStatus() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Data Refreshed', description: 'Driver status has been updated.' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Data Refreshed', description: 'Driver status has been updated.' })
+    })
   }
 
   // Statistics
@@ -131,10 +148,11 @@ export default function DriverStatus() {
     return sum + earnings
   }, 0)
 
-  const avgRating = (drivers.reduce((sum, d) => sum + d.rating, 0) / drivers.length).toFixed(1)
+  const avgRating = drivers.length > 0 ? (drivers.reduce((sum, d) => sum + d.rating, 0) / drivers.length).toFixed(1) : '0.0'
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

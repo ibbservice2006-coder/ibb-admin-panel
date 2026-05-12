@@ -13,16 +13,29 @@ import {
   User, Phone, MessageSquare, Eye, CheckCircle2, Car, Navigation
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-const assignedBookingsData = [
-  { id: 'BK-2024-009', customer: 'David Miller', phone: '+66-8-9012-3456', pickup: 'Siam Paragon', dropoff: 'Don Mueang Airport', driver: 'Wichai S.', driverPhone: '+66-8-1234-5678', vehicle: 'VAN-32', passengers: 5, fare: '฿550', bookingTime: '2024-03-22 18:00', status: 'assigned', eta: '12 min', notes: 'Passenger has extra luggage' },
-  { id: 'BK-2024-010', customer: 'Linda Green', phone: '+66-8-0123-4567', pickup: 'Sukhumvit Soi 11', dropoff: 'Asok Junction', driver: 'Somchai P.', driverPhone: '+66-8-2345-6789', vehicle: 'CAR-05', passengers: 1, fare: '฿180', bookingTime: '2024-03-22 18:30', status: 'assigned', eta: '5 min', notes: '' },
-  { id: 'BK-2024-011', customer: 'Robert Chen', phone: '+66-8-1234-5670', pickup: 'Central World', dropoff: 'Chatuchak Market', driver: 'Niran T.', driverPhone: '+66-8-3456-7890', vehicle: 'BUS-08', passengers: 12, fare: '฿1,200', bookingTime: '2024-03-22 19:00', status: 'assigned', eta: '20 min', notes: 'Group booking - corporate event' }
-]
+import { useBookings } from '@/hooks/useBookings'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 export default function AssignedBookings() {
   const { toast } = useToast()
-  const [bookings, setBookings] = useState(assignedBookingsData)
+  const { data, isLoading, isError, refetch } = useBookings({ status: 'assigned' })
+  const bookings = (data?.data ?? []).map(b => ({
+    id: b.id,
+    _uuid: b._uuid,
+    customer: b.customer,
+    phone: b.phone,
+    pickup: b.pickup,
+    dropoff: b.dropoff,
+    driver: b.driver,
+    driverPhone: '-',
+    vehicle: b.vehicle,
+    passengers: b.passengers,
+    fare: `฿${(b.fare || 0).toLocaleString()}`,
+    bookingTime: b.createdAt ? b.createdAt.replace('T', ' ').slice(0, 16) : '-',
+    status: 'assigned',
+    eta: '-',
+    notes: '',
+  }))
   const [searchQuery, setSearchQuery] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
@@ -47,6 +60,7 @@ export default function AssignedBookings() {
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Assigned Bookings</h1>

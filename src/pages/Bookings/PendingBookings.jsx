@@ -10,12 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Search, Filter, Download, RefreshCw, Phone, MapPin, Clock, AlertCircle, CheckCircle2, Zap, User, MessageSquare, Eye, X } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-const pendingBookingsData = [
-  { id: 'BK-2024-004', customer: 'Emma Wilson', phone: '+66-8-4567-8901', pickup: 'Airport Terminal 3', dropoff: 'City Center', passengers: 3, fare: '฿520', bookingTime: '2024-03-22 16:30', waitTime: '8 min', priority: 'normal', notes: 'Customer waiting at terminal' },
-  { id: 'BK-2024-006', customer: 'Lisa Anderson', phone: '+66-8-6789-0123', pickup: 'Hospital', dropoff: 'Residential Area', passengers: 2, fare: '฿380', bookingTime: '2024-03-22 17:15', waitTime: '12 min', priority: 'vip', notes: 'VIP Member - Priority' },
-  { id: 'BK-2024-007', customer: 'Robert Taylor', phone: '+66-8-7890-1234', pickup: 'Shopping Center', dropoff: 'Hotel', passengers: 4, fare: '฿450', bookingTime: '2024-03-22 17:45', waitTime: '15 min', priority: 'normal', notes: 'Large group' },
-]
+import { useBookings, useConfirmBooking, useCancelBooking } from '@/hooks/useBookings'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 const availableDrivers = [
   { id: 'D001', name: 'Somchai Panya', vehicle: 'IBB-VAN-012', rating: 4.9, trips: 1842 },
@@ -26,7 +22,25 @@ const availableDrivers = [
 
 export default function PendingBookings() {
   const { toast } = useToast()
-  const [bookings, setBookings] = useState(pendingBookingsData)
+  const { data, isLoading, isError, refetch } = useBookings({ status: 'pending' })
+  const confirmBooking = useConfirmBooking()
+  const cancelBooking = useCancelBooking()
+  // Normalize API data to shape the UI expects
+  const rawBookings = data?.data ?? []
+  const apiBookings = rawBookings.map(b => ({
+    id: b.id,
+    _uuid: b._uuid,
+    customer: b.customer,
+    phone: b.phone,
+    pickup: b.pickup,
+    dropoff: b.dropoff,
+    passengers: b.passengers,
+    fare: `฿${(b.fare || 0).toLocaleString()}`,
+    bookingTime: b.createdAt ? b.createdAt.replace('T', ' ').slice(0, 16) : '-',
+    waitTime: '-',
+    priority: 'normal',
+    notes: '',
+  }))
   const [searchTerm, setSearchTerm] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
@@ -40,36 +54,39 @@ export default function PendingBookings() {
   const [messageText, setMessageText] = useState('')
   const [cancelReason, setCancelReason] = useState('')
 
-  const filteredBookings = bookings.filter(b =>
+  const filteredBookings = apiBookings.filter(b =>
     b.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.customer.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(r => setTimeout(r, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Refreshed', description: 'Pending bookings updated.' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Pending bookings updated.' })
+    })
   }
 
   const handleAssignConfirm = () => {
     if (!selectedDriver) return
     const driver = availableDrivers.find(d => d.id === selectedDriver)
-    setBookings(prev => prev.filter(b => b.id !== selectedBooking.id))
+    // Phase 2: call assign driver API endpoint
+    confirmBooking.mutate(selectedBooking._uuid)
     setShowAssignDialog(false)
     setSelectedDriver('')
     toast({ title: 'Driver Assigned', description: `${driver.name} assigned to ${selectedBooking.id}` })
   }
 
   const handleCancelConfirm = () => {
-    setBookings(prev => prev.filter(b => b.id !== selectedBooking.id))
-    setShowCancelDialog(false)
-    setCancelReason('')
-    toast({ title: 'Booking Cancelled', description: `${selectedBooking.id} has been cancelled`, variant: 'destructive' })
+    cancelBooking.mutate(
+      { id: selectedBooking._uuid, reason: cancelReason || 'Cancelled by admin' },
+      { onSuccess: () => { setShowCancelDialog(false); setCancelReason('') } }
+    )
   }
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Pending Bookings</h1>
@@ -86,9 +103,9 @@ export default function PendingBookings() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-none shadow-sm bg-white"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">Total Pending</p><h3 className="text-2xl font-bold mt-1">{bookings.length}</h3></div><div className="p-2 rounded-lg bg-yellow-50"><Clock className="h-5 w-5 text-yellow-600" /></div></div></CardContent></Card>
-        <Card className="border-none shadow-sm bg-white"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">VIP Bookings</p><h3 className="text-2xl font-bold mt-1">{bookings.filter(b => b.priority === 'vip').length}</h3></div><div className="p-2 rounded-lg bg-purple-50"><Zap className="h-5 w-5 text-purple-600" /></div></div></CardContent></Card>
-        <Card className="border-none shadow-sm bg-white"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">Avg Wait Time</p><h3 className="text-2xl font-bold mt-1">11 min</h3></div><div className="p-2 rounded-lg bg-blue-50"><AlertCircle className="h-5 w-5 text-blue-600" /></div></div></CardContent></Card>
+        <Card className="border-none shadow-sm bg-white"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">Total Pending</p><h3 className="text-2xl font-bold mt-1">{isLoading ? '...' : (data?.total ?? apiBookings.length)}</h3></div><div className="p-2 rounded-lg bg-yellow-50"><Clock className="h-5 w-5 text-yellow-600" /></div></div></CardContent></Card>
+        <Card className="border-none shadow-sm bg-white"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">VIP Bookings</p><h3 className="text-2xl font-bold mt-1">{apiBookings.filter(b => b.priority === 'vip').length}</h3></div><div className="p-2 rounded-lg bg-purple-50"><Zap className="h-5 w-5 text-purple-600" /></div></div></CardContent></Card>
+        <Card className="border-none shadow-sm bg-white"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-muted-foreground">Avg Wait Time</p><h3 className="text-2xl font-bold mt-1">-</h3></div><div className="p-2 rounded-lg bg-blue-50"><AlertCircle className="h-5 w-5 text-blue-600" /></div></div></CardContent></Card>
       </div>
 
       <Card className="border-none shadow-sm">

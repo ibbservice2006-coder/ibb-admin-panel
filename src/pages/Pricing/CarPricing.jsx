@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -6,9 +6,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
+import { usePrices } from '@/hooks/usePricing'
 import { Search, RefreshCw, Download, Edit, Car, ChevronLeft, ChevronRight } from 'lucide-react'
-
-const BASE_API_URL = 'https://ibb-booking-api.ibbshuttleservice.com'; // Replace with your actual Cloudflare Worker URL
 
 
 
@@ -19,40 +18,23 @@ const fp = (v) => v ? `฿${v.toLocaleString()}` : <span className="text-gray-30
 const PAGE_SIZE = 15
 
 export default function CarPricing() {
-  const [vehicleCategories, setVehicleCategories] = useState([]);
-    const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const { data: pricesData, isLoading, refetch } = usePrices()
+  const vehicleCategories = (pricesData?.data ?? [])
+    .filter(p => !p.vehicle_type || p.vehicle_type === 'car' || p.vehicle_type === 'sedan')
+    .map(p => ({
+      id: p.id,
+      destination: p.destination ?? p.route_name ?? '-',
+      zone: p.zone ?? '-',
+      distance: p.distance ?? '-',
+      std: p.price_standard ?? p.base_price_thb ?? null,
+      exec: p.price_executive ?? null,
+      family: p.price_family ?? null,
+      electric: p.price_electric ?? null,
+      limo_premium: p.price_limo_premium ?? null,
+      limo_luxury: p.price_limo_luxury ?? null,
+    }))
 
-  useEffect(() => {
-    fetchVehicleCategories();
-  }, []);
-
-  const fetchVehicleCategories = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${BASE_API_URL}/api/pricing`, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_CLOUDFLARE_API_TOKEN || ''}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setVehicleCategories(data);
-    } catch (error) {
-      console.error("Error fetching vehicle categories:", error);
-      toast({ title: 'Error', description: 'Failed to load pricing data.', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyMarkup = (price) => {
-    if (price === null) return null;
-    return Math.round(price * 1.04);
-  };
+  const [search, setSearch] = useState('')
   const [zone, setZone] = useState('All Zones')
   const [page, setPage] = useState(1)
   const [editRow, setEditRow] = useState(null)
@@ -60,10 +42,10 @@ export default function CarPricing() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const handleRefresh = () => {
     setIsRefreshing(true)
-    setTimeout(() => {
+    refetch().finally(() => {
       setIsRefreshing(false)
       toast({ title: 'Refreshed', description: 'Latest data loaded' })
-    }, 800)
+    })
   }
   const handleExport = () => {
     const rows = [['#', 'Data', 'Value', 'Date']]

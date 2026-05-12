@@ -49,7 +49,7 @@ export default function VoucherAnalytics() {
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Voucher Analytics</h1>
-          <p className="text-muted-foreground text-sm mt-0.5"> >Analyze Voucher and Promotion Performance</p>
+          <p className="text-muted-foreground text-sm mt-0.5">Analyze Voucher and Promotion Performance</p>
         </div>
       </div>
 

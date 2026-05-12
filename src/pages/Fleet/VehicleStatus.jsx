@@ -21,6 +21,8 @@ import {
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useVehicles } from '@/hooks/useFleet'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 // Mock vehicle status data
 const vehicleStatusData = [
@@ -100,8 +102,21 @@ const statusConfig = {
 
 export default function VehicleStatus() {
   const { toast } = useToast()
+  const { data: vehiclesData, isLoading, isError, refetch } = useVehicles()
+  const vehicles = (vehiclesData?.data ?? []).map(v => ({
+    id: v.license_plate ?? v.id,
+    type: v.vehicle_type ?? 'Car',
+    driver: v.driver_name ?? 'Unassigned',
+    status: v.status === 'in_use' ? 'in-use' : (v.status ?? 'available'),
+    location: '-',
+    fuel: 0,
+    battery: 100,
+    lastUpdate: '-',
+    trips: 0,
+    distance: '-',
+    nextMaintenance: v.next_service_date ?? '-',
+  }))
   const [searchTerm, setSearchTerm] = useState('')
-  const [vehicles, setVehicles] = useState(vehicleStatusData)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
@@ -114,9 +129,10 @@ export default function VehicleStatus() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Data Refreshed', description: 'Vehicle status has been updated.' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Data Refreshed', description: 'Vehicle status has been updated.' })
+    })
   }
 
   // Statistics
@@ -127,11 +143,12 @@ export default function VehicleStatus() {
     offline: vehicles.filter(v => v.status === 'offline').length
   }
 
-  const avgFuel = Math.round(vehicles.reduce((sum, v) => sum + v.fuel, 0) / vehicles.length)
-  const avgBattery = Math.round(vehicles.reduce((sum, v) => sum + v.battery, 0) / vehicles.length)
+  const avgFuel = vehicles.length > 0 ? Math.round(vehicles.reduce((sum, v) => sum + v.fuel, 0) / vehicles.length) : 0
+  const avgBattery = vehicles.length > 0 ? Math.round(vehicles.reduce((sum, v) => sum + v.battery, 0) / vehicles.length) : 0
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

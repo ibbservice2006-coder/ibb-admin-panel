@@ -1,81 +1,59 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { authApi } from '@/lib/api'
 
 const AuthContext = createContext(null)
-
-// Demo credentials
-// Role hierarchy: superadmin > admin > manager
-const DEMO_USERS = [
-  {
-    id: 1,
-    email: 'superadmin@ibbshuttle.com',
-    password: 'superadmin1234',
-    name: 'IBB Super Admin',
-    role: 'superadmin',
-    avatar: null,
-  },
-  {
-    id: 2,
-    email: 'admin@ibbshuttle.com',
-    password: 'admin1234',
-    name: 'IBB Admin',
-    role: 'admin',
-    avatar: null,
-  },
-  {
-    id: 3,
-    email: 'manager@ibbshuttle.com',
-    password: 'manager1234',
-    name: 'IBB Manager',
-    role: 'manager',
-    avatar: null,
-  },
-]
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check for saved session
+    const token = localStorage.getItem('ibb_admin_token')
     const savedUser = localStorage.getItem('ibb_user')
-    if (savedUser) {
+    if (token && savedUser) {
       try {
         setUser(JSON.parse(savedUser))
       } catch {
         localStorage.removeItem('ibb_user')
+        localStorage.removeItem('ibb_admin_token')
       }
     }
     setLoading(false)
   }, [])
 
-  const login = (email, password) => {
-    // Find matching demo user
-    const found = DEMO_USERS.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    )
+  const login = async (email, password) => {
+    try {
+      const res = await authApi.login(email, password)
+      const { token } = res.data
 
-    if (found) {
+      // Decode payload (JWT is not verified client-side, just parsed)
+      const payload = JSON.parse(atob(token.split('.')[1]))
+
       const userData = {
-        id: found.id,
-        name: found.name,
-        email: found.email,
-        role: found.role,
-        avatar: found.avatar,
+        id:    payload.sub,
+        name:  payload.fullName,
+        email: payload.email,
+        role:  payload.role,
+        avatar: null,
       }
-      setUser(userData)
-      localStorage.setItem('ibb_user', JSON.stringify(userData))
-      return { success: true }
-    }
 
-    return {
-      success: false,
-      error: 'Email or password incorrect, please try again',
+      localStorage.setItem('ibb_admin_token', token)
+      localStorage.setItem('ibb_user', JSON.stringify(userData))
+      setUser(userData)
+      return { success: true }
+    } catch (err) {
+      const status = err.response?.status
+      if (status === 401) {
+        return { success: false, error: 'Email or password incorrect, please try again' }
+      }
+      return { success: false, error: 'Cannot connect to server, please try again' }
     }
   }
 
   const logout = () => {
     setUser(null)
     localStorage.removeItem('ibb_user')
+    localStorage.removeItem('ibb_admin_token')
   }
 
   return (

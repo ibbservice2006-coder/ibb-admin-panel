@@ -47,9 +47,12 @@ export default function AssignedBookings() {
   const [messageText, setMessageText] = useState('')
   const [callTarget, setCallTarget] = useState('customer')
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    setTimeout(() => { setIsRefreshing(false); toast({ title: 'Refreshed', description: 'Assigned bookings updated' }) }, 1000)
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Assigned bookings updated.' })
+    })
   }
 
   const filteredBookings = bookings.filter(b =>
@@ -217,7 +220,7 @@ export default function AssignedBookings() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowStartTripDialog(false)}>Cancel</Button>
-            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => { setBookings(prev => prev.filter(b => b.id !== selectedBooking.id)); setShowStartTripDialog(false); toast({ title: 'Trip Started', description: `${selectedBooking.id} is now in progress` }) }}><Navigation className="h-4 w-4 mr-2" />Confirm Start</Button>
+            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => { setShowStartTripDialog(false); toast({ title: 'Trip Started', description: `${selectedBooking.id} is now in progress` }); refetch() }}><Navigation className="h-4 w-4 mr-2" />Confirm Start</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

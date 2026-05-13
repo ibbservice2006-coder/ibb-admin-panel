@@ -44,21 +44,22 @@ export default function CancelledBookings() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(r => setTimeout(r, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Data Refreshed', description: 'Cancelled bookings have been updated.' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Cancelled bookings updated.' })
+    })
   }
 
   const handleRestoreConfirm = () => {
-    setBookings(prev => prev.filter(b => b.id !== selectedBooking.id))
     setShowRestoreDialog(false)
     toast({ title: 'Booking Restored', description: `${selectedBooking.id} has been restored to Pending` })
+    refetch()
   }
 
   const handleDeleteConfirm = () => {
-    setBookings(prev => prev.filter(b => b.id !== selectedBooking.id))
     setShowDeleteDialog(false)
     toast({ title: 'Booking Deleted', description: `${selectedBooking.id} has been permanently deleted`, variant: 'destructive' })
+    refetch()
   }
 
   const totalLost = bookings.filter(b => !b.refunded).reduce((s, b) => s + parseInt(b.fare.replace('฿', '')), 0)

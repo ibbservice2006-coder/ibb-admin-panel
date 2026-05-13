@@ -50,15 +50,16 @@ export default function InProgressBookings() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(r => setTimeout(r, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Data Refreshed', description: 'In-progress bookings have been updated.' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'In-progress bookings updated.' })
+    })
   }
 
   const handleCompleteConfirm = () => {
-    setBookings(prev => prev.filter(b => b.id !== selectedBooking.id))
     setShowCompleteDialog(false)
     toast({ title: 'Trip Completed', description: `${selectedBooking.id} has been completed successfully.` })
+    refetch()
   }
 
   return (

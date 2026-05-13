@@ -49,9 +49,10 @@ export default function CompletedBookings() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(r => setTimeout(r, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Data Refreshed', description: 'Completed bookings have been updated.' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Completed bookings updated.' })
+    })
   }
 
   const totalRevenue = bookings.reduce((s, b) => s + parseInt(b.fare.replace('฿', '')), 0)

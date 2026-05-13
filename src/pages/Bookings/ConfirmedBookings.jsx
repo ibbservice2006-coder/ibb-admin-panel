@@ -9,19 +9,27 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Search, Filter, Download, RefreshCw, CheckCircle2, MapPin, Clock, Eye, UserPlus, Phone, X, DollarSign, Users } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useQuery } from '@tanstack/react-query'
 import { useBookings, useCancelBooking } from '@/hooks/useBookings'
 import { ApiErrorBanner } from '@/components/ApiErrorBanner'
-
-const availableDrivers = [
-  { id: 'D001', name: 'Somchai Panya', vehicle: 'IBB-VAN-012', rating: 4.9, trips: 1842 },
-  { id: 'D002', name: 'Preecha Wongkham', vehicle: 'IBB-VAN-008', rating: 4.8, trips: 1654 },
-  { id: 'D003', name: 'Krit Thongchai', vehicle: 'IBB-VAN-005', rating: 4.7, trips: 1230 },
-]
+import { fleetApi } from '@/lib/api'
 
 export default function ConfirmedBookings() {
   const { toast } = useToast()
   const { data, isLoading, isError, refetch } = useBookings({ status: 'confirmed' })
   const cancelBooking = useCancelBooking()
+  const { data: driversData } = useQuery({
+    queryKey: ['drivers', 'available'],
+    queryFn: () => fleetApi.drivers({ status: 'available' }).then(r => r.data),
+    staleTime: 30_000,
+  })
+  const availableDrivers = (driversData?.data ?? []).map(d => ({
+    id: d.id,
+    name: d.full_name ?? d.name,
+    vehicle: d.vehicle_plate ?? d.license_plate ?? '-',
+    rating: d.rating ?? 0,
+    trips: d.total_trips ?? d.trips ?? 0,
+  }))
   const bookings = (data?.data ?? []).map(b => ({
     id: b.id,
     _uuid: b._uuid,
@@ -53,9 +61,10 @@ export default function ConfirmedBookings() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(r => setTimeout(r, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Data Refreshed', description: 'Confirmed bookings have been updated.' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Confirmed bookings updated.' })
+    })
   }
 
   const handleAssignConfirm = () => {
@@ -69,8 +78,8 @@ export default function ConfirmedBookings() {
 
   const handleCancelConfirm = () => {
     cancelBooking.mutate(
-      { id: selectedBooking._uuid, reason: 'Cancelled by admin' },
-      { onSuccess: () => setShowCancelDialog(false) }
+      { id: selectedBooking._uuid, reason: cancelReason || 'Cancelled by admin' },
+      { onSuccess: () => { setShowCancelDialog(false); setCancelReason('') } }
     )
   }
 

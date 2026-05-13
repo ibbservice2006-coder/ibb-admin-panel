@@ -238,8 +238,8 @@ export default function AllBookings() {
                         <Button variant="ghost" size="icon" onClick={() => { setSelectedBooking(b); setIsEditOpen(true) }}>
                           <Edit className="h-4 w-4 text-yellow-600" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { setSelectedBooking(b); setIsDeleteOpen(true) }} disabled={b.status === 'completed'}>
-                          <Trash2 className={`h-4 w-4 ${b.status === 'completed' ? 'text-gray-300' : 'text-red-600'}`} />
+                        <Button variant="ghost" size="icon" onClick={() => { setSelectedBooking(b); setIsDeleteOpen(true) }} disabled={b.status === 'completed' || b.status === 'cancelled'}>
+                          <Trash2 className={`h-4 w-4 ${(b.status === 'completed' || b.status === 'cancelled') ? 'text-gray-300' : 'text-red-600'}`} />
                         </Button>
                       </div>
                     </TableCell>

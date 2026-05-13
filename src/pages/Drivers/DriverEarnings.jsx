@@ -114,7 +114,7 @@ export default function DriverEarnings() {
     totalNetEarnings: earningsData.reduce((sum, r) => sum + r.netEarnings, 0),
     totalCommission: earningsData.reduce((sum, r) => sum + r.totalCommission, 0),
     totalDeductions: earningsData.reduce((sum, r) => sum + (r.platformFees + r.insuranceCost + r.maintenanceCost + r.fuelCost), 0),
-    averageEarningsPerDriver: Math.round(earningsData.reduce((sum, r) => sum + r.totalEarnings, 0) / earningsData.length),
+    averageEarningsPerDriver: earningsData.length > 0 ? Math.round(earningsData.reduce((sum, r) => sum + r.totalEarnings, 0) / earningsData.length) : 0,
     paidCount: earningsData.filter(r => r.paymentStatus === 'Paid').length
   }
 

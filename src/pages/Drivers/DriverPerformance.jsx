@@ -114,9 +114,9 @@ export default function DriverPerformance() {
   // Statistics
   const stats = {
     totalDrivers: performanceData.length,
-    averageRating: (performanceData.reduce((sum, r) => sum + parseFloat(r.rating), 0) / performanceData.length).toFixed(1),
-    averageSafetyScore: Math.round(performanceData.reduce((sum, r) => sum + r.safetyScore, 0) / performanceData.length),
-    averageOnTime: Math.round(performanceData.reduce((sum, r) => sum + r.onTimePercentage, 0) / performanceData.length),
+    averageRating: performanceData.length > 0 ? (performanceData.reduce((sum, r) => sum + parseFloat(r.rating), 0) / performanceData.length).toFixed(1) : '0.0',
+    averageSafetyScore: performanceData.length > 0 ? Math.round(performanceData.reduce((sum, r) => sum + r.safetyScore, 0) / performanceData.length) : 0,
+    averageOnTime: performanceData.length > 0 ? Math.round(performanceData.reduce((sum, r) => sum + r.onTimePercentage, 0) / performanceData.length) : 0,
     totalComplaints: performanceData.reduce((sum, r) => sum + r.customerComplaints, 0)
   }
 

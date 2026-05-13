@@ -14,7 +14,7 @@ import {
   Search, Plus, Edit, Trash2, Eye, MapPin, Users, Zap, AlertTriangle,
   Users as UsersIcon, TrendingUp, TrendingDown, BarChart3, ArrowUpDown, ChevronLeft,
   ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, Download, Filter, X as XIcon,
-  Star, Phone, Mail, Award
+  Star, Phone, Mail, Award, Ban
 } from 'lucide-react'
 
 const getStatusBadge = (status) => {
@@ -22,7 +22,8 @@ const getStatusBadge = (status) => {
     active: <Badge className="bg-green-100 text-green-800 border-green-200">Active</Badge>,
     inactive: <Badge className="bg-gray-100 text-gray-800 border-gray-200">Inactive</Badge>,
     on_leave: <Badge className="bg-blue-100 text-blue-800 border-blue-200">On Leave</Badge>,
-    suspended: <Badge className="bg-red-100 text-red-800 border-red-200">Suspended</Badge>
+    suspended: <Badge className="bg-red-100 text-red-800 border-red-200">Suspended</Badge>,
+    blacklisted: <Badge className="bg-black text-white border-black">Blacklisted</Badge>
   }
   return badges[status] || badges.active
 }
@@ -70,6 +71,8 @@ export default function AllDrivers() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [newDriver, setNewDriver] = useState({ name: '', phone: '', email: '', licenseNumber: '', status: 'active' })
+  const [isBlacklistDialogOpen, setIsBlacklistDialogOpen] = useState(false)
+  const [blacklistReason, setBlacklistReason] = useState('')
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
@@ -118,6 +121,7 @@ export default function AllDrivers() {
     active: apiDrivers.filter(d => d.status === 'active').length,
     inactive: apiDrivers.filter(d => d.status === 'inactive').length,
     onLeave: apiDrivers.filter(d => d.status === 'on_leave').length,
+    blacklisted: apiDrivers.filter(d => d.status === 'blacklisted').length,
     averageRating: apiDrivers.length > 0 ? (apiDrivers.reduce((sum, d) => sum + d.rating, 0) / apiDrivers.length).toFixed(1) : '0.0',
     totalEarnings: apiDrivers.reduce((sum, d) => sum + d.totalEarnings, 0)
   }
@@ -156,6 +160,28 @@ export default function AllDrivers() {
     )
   }
 
+  const handleOpenBlacklist = (driver) => {
+    setSelectedDriver(driver)
+    setBlacklistReason('')
+    setIsBlacklistDialogOpen(true)
+  }
+
+  const handleConfirmBlacklist = () => {
+    if (!blacklistReason.trim()) {
+      toast({ title: 'Reason required', description: 'Please enter a reason for blacklisting.', variant: 'destructive' })
+      return
+    }
+    updateDriver.mutate(
+      { id: selectedDriver.id, status: 'blacklisted', blacklist_reason: blacklistReason },
+      { onSuccess: () => {
+          setIsBlacklistDialogOpen(false)
+          setBlacklistReason('')
+          toast({ title: 'Driver Blacklisted', description: `${selectedDriver.name} has been blacklisted.`, variant: 'destructive' })
+        }
+      }
+    )
+  }
+
   const handleSelectAll = (checked) => {
     if (checked) {
       setSelectedDrivers(paginatedDrivers.map(d => d.id))
@@ -181,7 +207,7 @@ export default function AllDrivers() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Drivers</CardTitle>
@@ -234,6 +260,17 @@ export default function AllDrivers() {
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">฿{(stats.totalEarnings / 1000000).toFixed(1)}M</div>
             <p className="text-xs text-muted-foreground">All drivers</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-black/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Blacklisted</CardTitle>
+            <Ban className="h-4 w-4 text-black" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-black">{stats.blacklisted}</div>
+            <p className="text-xs text-muted-foreground">Banned drivers</p>
           </CardContent>
         </Card>
       </div>
@@ -290,6 +327,7 @@ export default function AllDrivers() {
                 <SelectItem value="inactive">Inactive</SelectItem>
                 <SelectItem value="on_leave">On Leave</SelectItem>
                 <SelectItem value="suspended">Suspended</SelectItem>
+                <SelectItem value="blacklisted">Blacklisted</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -371,6 +409,7 @@ export default function AllDrivers() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleViewDetails(driver)}
+                          title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -378,13 +417,24 @@ export default function AllDrivers() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(driver)}
+                          title="Edit"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleOpenBlacklist(driver)}
+                          title="Blacklist Driver"
+                          disabled={driver.status === 'blacklisted'}
+                        >
+                          <Ban className={`h-4 w-4 ${driver.status === 'blacklisted' ? 'text-gray-300' : 'text-orange-600'}`} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleDelete(driver)}
+                          title="Delete"
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
@@ -602,6 +652,59 @@ export default function AllDrivers() {
                 Delete
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Blacklist Dialog */}
+      {selectedDriver && (
+        <Dialog open={isBlacklistDialogOpen} onOpenChange={setIsBlacklistDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Ban className="h-5 w-5 text-red-600" />
+                Blacklist Driver
+              </DialogTitle>
+              <DialogDescription>
+                You are about to blacklist <strong>{selectedDriver.name}</strong>. Their data will be preserved for audit purposes, but they will be banned from the system.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+                <p className="font-medium mb-1">What will happen:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Driver status changes to <strong>Blacklisted</strong></li>
+                  <li>All driver data and documents are preserved</li>
+                  <li>Driver cannot be assigned to new trips</li>
+                  <li>Blacklist reason is recorded in the system</li>
+                </ul>
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  Reason for Blacklisting <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  placeholder="e.g. Multiple serious complaints, fraud, dangerous driving..."
+                  value={blacklistReason}
+                  onChange={e => setBlacklistReason(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsBlacklistDialogOpen(false)}>Cancel</Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleConfirmBlacklist}
+                disabled={!blacklistReason.trim() || updateDriver.isPending}
+                className="bg-black hover:bg-gray-800"
+              >
+                <Ban className="h-4 w-4 mr-2" />
+                Confirm Blacklist
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}

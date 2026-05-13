@@ -233,7 +233,7 @@ export default function DriverDocuments() {
 
       {/* Driver Documents */}
       <div className="space-y-4">
-        {drivers.map(driver => (
+        {drivers.filter(driver => driver.documents.length > 0).map(driver => (
           <Card key={driver.id} className="border-none shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">{driver.name}</CardTitle>
@@ -292,9 +292,6 @@ export default function DriverDocuments() {
                     </div>
                   </div>
                 ))}
-                {driver.documents.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">No documents for this driver.</p>
-                )}
               </div>
             </CardContent>
           </Card>

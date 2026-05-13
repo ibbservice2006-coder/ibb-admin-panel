@@ -320,7 +320,7 @@ export default function DriverStatus() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Button variant="outline" size="sm" onClick={() => toast({ title: 'View Details', description: 'Loading details...' })}>
+                  <Button variant="outline" size="sm" onClick={() => { setSelectedDriver(driver); setShowDetailDialog(true) }}>
                     <Eye className="h-4 w-4 mr-2" />
                     View
                   </Button>

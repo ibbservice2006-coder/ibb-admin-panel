@@ -63,9 +63,12 @@ export default function DriverDocuments() {
   const [showDocDialog, setShowDocDialog] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const handleRefresh = async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    setIsRefreshing(true)
+    await new Promise(resolve => setTimeout(resolve, 500))
+    setIsRefreshing(false)
     toast({ title: 'Data Refreshed', description: 'Document status has been updated.' })
   }
 
@@ -84,8 +87,8 @@ export default function DriverDocuments() {
           <p className="text-muted-foreground mt-1">Manage and track driver documentation and expiry dates</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button size="sm" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => setShowExportDialog(true)}>
@@ -261,15 +264,14 @@ export default function DriverDocuments() {
       </Card>
       <Dialog open={showDocDialog} onOpenChange={setShowDocDialog}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Document Details</DialogTitle><DialogDescription>{selectedDoc?.type} - {selectedDoc?.driverName}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Document Details</DialogTitle><DialogDescription>{selectedDoc?.type}</DialogDescription></DialogHeader>
           {selectedDoc && (
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><p className="text-muted-foreground">Driver</p><p className="font-bold">{selectedDoc.driverName}</p></div>
               <div><p className="text-muted-foreground">Document Type</p><p className="font-medium">{selectedDoc.type}</p></div>
               <div><p className="text-muted-foreground">Status</p><p className="font-medium capitalize">{selectedDoc.status}</p></div>
-              <div><p className="text-muted-foreground">Expiry Date</p><p className="font-medium">{selectedDoc.expiry || 'N/A'}</p></div>
-              <div><p className="text-muted-foreground">Submitted</p><p className="font-medium">{selectedDoc.submitted || 'N/A'}</p></div>
-              <div><p className="text-muted-foreground">Document No.</p><p className="font-medium">{selectedDoc.docNo || 'N/A'}</p></div>
+              <div><p className="text-muted-foreground">Expiry Date</p><p className="font-medium">{selectedDoc.expiryDate || 'N/A'}</p></div>
+              <div><p className="text-muted-foreground">Days Left</p><p className="font-medium">{selectedDoc.daysLeft < 0 ? `${Math.abs(selectedDoc.daysLeft)} days expired` : `${selectedDoc.daysLeft} days`}</p></div>
+              <div><p className="text-muted-foreground">Document No.</p><p className="font-medium">{selectedDoc.number || 'N/A'}</p></div>
             </div>
           )}
           <DialogFooter>

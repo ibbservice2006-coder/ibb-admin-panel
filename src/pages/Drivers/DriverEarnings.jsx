@@ -8,41 +8,13 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
+import { useDrivers } from '@/hooks/useFleet'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 import {
   TrendingUp, TrendingDown, BarChart3, ArrowUpDown, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight, RefreshCw, Download, Eye, Edit, Trash2,
   DollarSign, Wallet, CreditCard, AlertTriangle, CheckCircle, Clock
 } from 'lucide-react'
-
-// Mock data for driver earnings
-const generateMockEarningsData = () => {
-  return Array.from({ length: 20 }, (_, index) => ({
-    id: index + 1,
-    driverId: index + 1,
-    driverName: ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Wilson', 'Tom Brown', 'Lisa Anderson', 'David Lee', 'Emma Davis', 'Chris Martin', 'Sophie Taylor'][index % 10],
-    month: 'March 2026',
-    totalEarnings: Math.floor(Math.random() * 50000) + 10000,
-    totalTrips: Math.floor(Math.random() * 100) + 20,
-    averagePerTrip: Math.floor(Math.random() * 200) + 100,
-    bonusEarnings: Math.floor(Math.random() * 5000),
-    penaltyDeductions: Math.floor(Math.random() * 2000),
-    commissionRate: (Math.random() * 5 + 15).toFixed(1),
-    totalCommission: Math.floor(Math.random() * 10000) + 1000,
-    platformFees: Math.floor(Math.random() * 5000),
-    insuranceCost: Math.floor(Math.random() * 2000),
-    maintenanceCost: Math.floor(Math.random() * 3000),
-    fuelCost: Math.floor(Math.random() * 8000),
-    netEarnings: Math.floor(Math.random() * 40000) + 5000,
-    paymentStatus: ['Paid', 'Pending', 'Processing'][Math.floor(Math.random() * 3)],
-    paymentMethod: ['Bank Transfer', 'Wallet', 'Check'][Math.floor(Math.random() * 3)],
-    paymentDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    totalWorkingDays: Math.floor(Math.random() * 25) + 5,
-    totalWorkingHours: Math.floor(Math.random() * 200) + 50,
-    averageHourlyRate: Math.floor(Math.random() * 200) + 100
-  }))
-}
-
-const mockEarningsData = generateMockEarningsData()
 
 const getPaymentStatusBadge = (status) => {
   const badges = {
@@ -54,7 +26,31 @@ const getPaymentStatusBadge = (status) => {
 }
 
 export default function DriverEarnings() {
-  const [earningsData, setEarningsData] = useState(mockEarningsData)
+  const { data: driversData, isError, refetch } = useDrivers()
+  const earningsData = (driversData?.data ?? []).map((d, index) => ({
+    id: d.id ?? index + 1,
+    driverId: d.id ?? index + 1,
+    driverName: d.driver_name ?? d.name ?? '-',
+    month: 'Current Period',
+    totalEarnings: parseFloat(d.total_earnings ?? 0),
+    totalTrips: d.total_trips ?? 0,
+    averagePerTrip: d.total_trips > 0 ? Math.round(parseFloat(d.total_earnings ?? 0) / d.total_trips) : 0,
+    bonusEarnings: 0,
+    penaltyDeductions: 0,
+    commissionRate: '20.0',
+    totalCommission: Math.round(parseFloat(d.total_earnings ?? 0) * 0.2),
+    platformFees: 0,
+    insuranceCost: 0,
+    maintenanceCost: 0,
+    fuelCost: 0,
+    netEarnings: parseFloat(d.total_earnings ?? 0),
+    paymentStatus: 'Pending',
+    paymentMethod: 'Bank Transfer',
+    paymentDate: '-',
+    totalWorkingDays: 0,
+    totalWorkingHours: 0,
+    averageHourlyRate: 0,
+  }))
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedRecords, setSelectedRecords] = useState([])
@@ -124,9 +120,10 @@ export default function DriverEarnings() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Refreshed', description: 'Earnings data updated' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Earnings data updated' })
+    })
   }
 
   const handleViewDetails = (record) => {
@@ -152,6 +149,7 @@ export default function DriverEarnings() {
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Driver Earnings</h1>

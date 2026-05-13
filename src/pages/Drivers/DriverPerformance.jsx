@@ -8,42 +8,13 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
+import { useDrivers } from '@/hooks/useFleet'
+import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 import {
   TrendingUp, TrendingDown, BarChart3, ArrowUpDown, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight, RefreshCw, Download, Eye, Edit, Trash2,
   Star, Award, AlertTriangle, CheckCircle, Clock, Zap
 } from 'lucide-react'
-
-// Mock data for driver performance
-const generateMockPerformanceData = () => {
-  return Array.from({ length: 20 }, (_, index) => ({
-    id: index + 1,
-    driverId: index + 1,
-    driverName: ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Wilson', 'Tom Brown', 'Lisa Anderson', 'David Lee', 'Emma Davis', 'Chris Martin', 'Sophie Taylor'][index % 10],
-    month: 'March 2026',
-    rating: (Math.random() * 1 + 4).toFixed(1),
-    totalTrips: Math.floor(Math.random() * 100) + 20,
-    completedTrips: Math.floor(Math.random() * 95) + 20,
-    cancelledTrips: Math.floor(Math.random() * 5),
-    averageRating: (Math.random() * 1 + 4).toFixed(1),
-    onTimePercentage: Math.floor(Math.random() * 20) + 80,
-    safetyScore: Math.floor(Math.random() * 20) + 80,
-    customerComplaints: Math.floor(Math.random() * 3),
-    totalEarnings: Math.floor(Math.random() * 50000) + 10000,
-    averageEarningsPerTrip: Math.floor(Math.random() * 200) + 100,
-    acceptanceRate: Math.floor(Math.random() * 20) + 80,
-    cancellationRate: Math.floor(Math.random() * 5),
-    averageWaitTime: Math.floor(Math.random() * 5) + 2,
-    averageTripDuration: Math.floor(Math.random() * 30) + 15,
-    totalDistance: Math.floor(Math.random() * 5000) + 500,
-    fuelConsumption: (Math.random() * 2 + 8).toFixed(1),
-    vehicleCondition: ['Excellent', 'Good', 'Fair'][Math.floor(Math.random() * 3)],
-    communicationRating: (Math.random() * 1 + 4).toFixed(1),
-    reliabilityScore: Math.floor(Math.random() * 20) + 80
-  }))
-}
-
-const mockPerformanceData = generateMockPerformanceData()
 
 const getPerformanceColor = (score) => {
   if (score >= 85) return 'text-green-600'
@@ -60,7 +31,32 @@ const getPerformanceBadge = (score) => {
 }
 
 export default function DriverPerformance() {
-  const [performanceData, setPerformanceData] = useState(mockPerformanceData)
+  const { data: driversData, isError, refetch } = useDrivers()
+  const performanceData = (driversData?.data ?? []).map((d, index) => ({
+    id: d.id ?? index + 1,
+    driverId: d.id ?? index + 1,
+    driverName: d.driver_name ?? d.name ?? '-',
+    month: 'Current Period',
+    rating: parseFloat(d.rating ?? 0).toFixed(1),
+    totalTrips: d.total_trips ?? 0,
+    completedTrips: d.total_trips ?? 0,
+    cancelledTrips: 0,
+    averageRating: parseFloat(d.rating ?? 0).toFixed(1),
+    onTimePercentage: 0,
+    safetyScore: 0,
+    customerComplaints: 0,
+    totalEarnings: parseFloat(d.total_earnings ?? 0),
+    averageEarningsPerTrip: d.total_trips > 0 ? Math.round(parseFloat(d.total_earnings ?? 0) / d.total_trips) : 0,
+    acceptanceRate: 0,
+    cancellationRate: 0,
+    averageWaitTime: 0,
+    averageTripDuration: 0,
+    totalDistance: 0,
+    fuelConsumption: '0.0',
+    vehicleCondition: '-',
+    communicationRating: '0.0',
+    reliabilityScore: 0,
+  }))
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRecords, setSelectedRecords] = useState([])
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
@@ -126,9 +122,10 @@ export default function DriverPerformance() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsRefreshing(false)
-    toast({ title: 'Refreshed', description: 'Performance data updated' })
+    await refetch().finally(() => {
+      setIsRefreshing(false)
+      toast({ title: 'Refreshed', description: 'Performance data updated' })
+    })
   }
 
   const handleViewDetails = (record) => {
@@ -154,6 +151,7 @@ export default function DriverPerformance() {
 
   return (
     <div className="space-y-6">
+      {isError && <ApiErrorBanner onRetry={refetch} />}
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Driver Performance</h1>

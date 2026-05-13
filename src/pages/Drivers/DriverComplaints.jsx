@@ -116,8 +116,12 @@ export default function DriverComplaints() {
     complaint.customer.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
   const handleRefresh = async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    setIsRefreshing(true)
+    await new Promise(resolve => setTimeout(resolve, 500))
+    setIsRefreshing(false)
     toast({ title: 'Data Refreshed', description: 'Complaint data has been updated.' })
   }
 
@@ -143,8 +147,8 @@ export default function DriverComplaints() {
           <p className="text-muted-foreground mt-1">Manage and track customer complaints against drivers</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button size="sm" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => setShowExportDialog(true)}>
@@ -331,7 +335,7 @@ export default function DriverComplaints() {
                     Respond
                   </Button>
                 )}
-                <Button variant="outline" size="sm" className="text-red-600 border-red-200" onClick={() => toast({ title: 'Deleted', description: 'Data deleted successfully', variant: 'destructive' })}>
+                <Button variant="outline" size="sm" className="text-red-600 border-red-200" onClick={() => { setComplaints(complaints.filter(c => c.id !== complaint.id)); toast({ title: 'Deleted', description: 'Complaint deleted', variant: 'destructive' }) }}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>
@@ -346,8 +350,8 @@ export default function DriverComplaints() {
           {selectedComplaint && (
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-muted-foreground">Driver</p><p className="font-bold">{selectedComplaint.driverName}</p></div>
-                <div><p className="text-muted-foreground">Customer</p><p className="font-medium">{selectedComplaint.customerName || 'N/A'}</p></div>
+                <div><p className="text-muted-foreground">Driver</p><p className="font-bold">{selectedComplaint.driver}</p></div>
+                <div><p className="text-muted-foreground">Customer</p><p className="font-medium">{selectedComplaint.customer || 'N/A'}</p></div>
                 <div><p className="text-muted-foreground">Category</p><p className="font-medium">{selectedComplaint.category}</p></div>
                 <div><p className="text-muted-foreground">Status</p><p className="font-medium capitalize">{selectedComplaint.status}</p></div>
                 <div><p className="text-muted-foreground">Date</p><p className="font-medium">{selectedComplaint.date}</p></div>

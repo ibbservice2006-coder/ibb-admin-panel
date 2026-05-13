@@ -119,8 +119,8 @@ export default function LiveOperations() {
       bg: 'bg-yellow-50'
     },
     {
-      label: 'Vehicles in Use',
-      value: vehicleCounts.in_use ?? 0,
+      label: 'Vehicles Assigned',
+      value: vehicleCounts.assigned ?? vehicleCounts.in_use ?? 0,
       icon: Car,
       color: 'text-purple-600',
       bg: 'bg-purple-50'

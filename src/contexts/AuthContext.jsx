@@ -12,7 +12,15 @@ export function AuthProvider({ children }) {
     const savedUser = localStorage.getItem('ibb_user')
     if (token && savedUser) {
       try {
-        setUser(JSON.parse(savedUser))
+        // Check JWT expiry before trusting localStorage
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        const isExpired = payload.exp && Date.now() / 1000 > payload.exp
+        if (isExpired) {
+          localStorage.removeItem('ibb_admin_token')
+          localStorage.removeItem('ibb_user')
+        } else {
+          setUser(JSON.parse(savedUser))
+        }
       } catch {
         localStorage.removeItem('ibb_user')
         localStorage.removeItem('ibb_admin_token')

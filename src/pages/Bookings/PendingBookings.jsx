@@ -10,21 +10,28 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Search, Filter, Download, RefreshCw, Phone, MapPin, Clock, AlertCircle, CheckCircle2, Zap, User, MessageSquare, Eye, X } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useQuery } from '@tanstack/react-query'
 import { useBookings, useConfirmBooking, useCancelBooking } from '@/hooks/useBookings'
 import { ApiErrorBanner } from '@/components/ApiErrorBanner'
-
-const availableDrivers = [
-  { id: 'D001', name: 'Somchai Panya', vehicle: 'IBB-VAN-012', rating: 4.9, trips: 1842 },
-  { id: 'D002', name: 'Preecha Wongkham', vehicle: 'IBB-VAN-008', rating: 4.8, trips: 1654 },
-  { id: 'D003', name: 'Krit Thongchai', vehicle: 'IBB-VAN-005', rating: 4.7, trips: 1230 },
-  { id: 'D004', name: 'Arthit Sombat', vehicle: 'IBB-VAN-015', rating: 4.9, trips: 2100 },
-]
+import { fleetApi } from '@/lib/api'
 
 export default function PendingBookings() {
   const { toast } = useToast()
   const { data, isLoading, isError, refetch } = useBookings({ status: 'pending' })
   const confirmBooking = useConfirmBooking()
   const cancelBooking = useCancelBooking()
+  const { data: driversData } = useQuery({
+    queryKey: ['drivers', 'available'],
+    queryFn: () => fleetApi.drivers({ status: 'available' }).then(r => r.data),
+    staleTime: 30_000,
+  })
+  const availableDrivers = (driversData?.data ?? []).map(d => ({
+    id: d.id,
+    name: d.full_name ?? d.name,
+    vehicle: d.vehicle_plate ?? d.license_plate ?? '-',
+    rating: d.rating ?? 0,
+    trips: d.total_trips ?? d.trips ?? 0,
+  }))
   // Normalize API data to shape the UI expects
   const rawBookings = data?.data ?? []
   const apiBookings = rawBookings.map(b => ({

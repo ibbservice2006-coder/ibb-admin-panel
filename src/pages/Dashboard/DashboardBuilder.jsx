@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -37,10 +37,25 @@ const defaultLayout = [
   { id: 'widget-3', name: 'Drivers Online', size: 'medium', position: 3 }
 ]
 
+const LS_KEY = 'ibb_dashboard_layout'
+
+function loadLayout() {
+  try {
+    const saved = localStorage.getItem(LS_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch { /* ignore */ }
+  return defaultLayout
+}
+
 export default function DashboardBuilder() {
   const { toast } = useToast()
-  const [widgets, setWidgets] = useState(defaultLayout)
+  const [widgets, setWidgets] = useState(loadLayout)
   const [isPreview, setIsPreview] = useState(false)
+
+  // Persist to localStorage whenever layout changes
+  useEffect(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify(widgets))
+  }, [widgets])
 
   const handleAddWidget = (widget) => {
     const newWidget = {
@@ -59,11 +74,13 @@ export default function DashboardBuilder() {
   }
 
   const handleSave = () => {
+    localStorage.setItem(LS_KEY, JSON.stringify(widgets))
     toast({ title: 'Dashboard Saved', description: 'Your dashboard layout has been saved successfully.' })
   }
 
   const handleReset = () => {
     setWidgets(defaultLayout)
+    localStorage.setItem(LS_KEY, JSON.stringify(defaultLayout))
     toast({ title: 'Dashboard Reset', description: 'Dashboard has been reset to default layout.' })
   }
 

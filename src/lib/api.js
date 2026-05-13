@@ -36,6 +36,9 @@ export const authApi = {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export const dashboardApi = {
   stats:  ()                    => api.get('/admin/dashboard'),
+  live:   ()                    => api.get('/admin/dashboard/live'),
+  kpi:    ()                    => api.get('/admin/dashboard/kpi'),
+  alerts: ()                    => api.get('/admin/dashboard/alerts'),
 }
 
 // ─── Bookings ─────────────────────────────────────────────────────────────────

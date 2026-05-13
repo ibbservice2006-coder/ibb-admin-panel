@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -97,11 +97,26 @@ const savedFilters = [
 const categories = ['All', 'Operations', 'Customers', 'Bookings', 'Fleet', 'Drivers']
 const filterCategories = ['Operations', 'Customers', 'Bookings', 'Fleet', 'Drivers']
 
+const LS_KEY = 'ibb_saved_filters'
+
+function loadFilters() {
+  try {
+    const saved = localStorage.getItem(LS_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch { /* ignore */ }
+  return savedFilters
+}
+
 export default function SavedFilters() {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
-  const [filters, setFilters] = useState(savedFilters)
+  const [filters, setFilters] = useState(loadFilters)
+
+  // Persist to localStorage whenever filters change
+  useEffect(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify(filters))
+  }, [filters])
 
   // New Filter Dialog state
   const [isNewFilterOpen, setIsNewFilterOpen] = useState(false)

@@ -226,7 +226,6 @@ export default function LiveOperations() {
                         )}
                       </div>
                       <div className="text-right text-xs text-muted-foreground">
-                        <p>{trip.passenger_count} pax</p>
                         {trip.started_at && (
                           <p className="mt-1">Started {formatStarted(trip.started_at)}</p>
                         )}

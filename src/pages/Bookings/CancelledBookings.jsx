@@ -9,12 +9,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Search, Filter, Download, RefreshCw, XCircle, MapPin, Clock, Eye, RotateCcw, Trash2, DollarSign } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { useBookings } from '@/hooks/useBookings'
+import { useBookings, useDeleteBooking } from '@/hooks/useBookings'
 import { ApiErrorBanner } from '@/components/ApiErrorBanner'
 
 export default function CancelledBookings() {
   const { toast } = useToast()
   const { data, isLoading, isError, refetch } = useBookings({ status: 'cancelled' })
+  const deleteBooking = useDeleteBooking()
   const bookings = (data?.data ?? []).map(b => ({
     id: b.id,
     _uuid: b._uuid,
@@ -58,8 +59,7 @@ export default function CancelledBookings() {
 
   const handleDeleteConfirm = () => {
     setShowDeleteDialog(false)
-    toast({ title: 'Booking Deleted', description: `${selectedBooking.id} has been permanently deleted`, variant: 'destructive' })
-    refetch()
+    deleteBooking.mutate(selectedBooking._uuid)
   }
 
   const totalLost = bookings.filter(b => !b.refunded).reduce((s, b) => s + parseInt(b.fare.replace('฿', '')), 0)

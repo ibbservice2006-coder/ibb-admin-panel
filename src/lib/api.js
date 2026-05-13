@@ -48,6 +48,7 @@ export const bookingsApi = {
   get:    (id)                  => api.get(`/admin/bookings/${id}`),
   confirm:(id)                  => api.patch(`/admin/bookings/${id}/confirm`),
   cancel: (id, reason)          => api.patch(`/admin/bookings/${id}/cancel`, { reason }),
+  delete: (id)                  => api.delete(`/admin/bookings/${id}`),
 }
 
 // ─── Customers ────────────────────────────────────────────────────────────────

@@ -71,3 +71,16 @@ export function useCancelBooking() {
     onError: () => toast({ title: 'Failed to cancel', variant: 'destructive' }),
   })
 }
+
+export function useDeleteBooking() {
+  const qc = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: (id) => bookingsApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookings'] })
+      toast({ title: 'Booking deleted', description: 'Permanently deleted', variant: 'destructive' })
+    },
+    onError: () => toast({ title: 'Failed to delete', variant: 'destructive' }),
+  })
+}

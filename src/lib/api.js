@@ -90,3 +90,9 @@ export const routesApi = {
   list:   (params = {})         => api.get('/admin/routes', { params }),
   get:    (id)                  => api.get(`/admin/routes/${id}`),
 }
+
+// ─── Admin Preferences ────────────────────────────────────────────────────────
+export const preferencesApi = {
+  get: (key)         => api.get(`/admin/preferences/${key}`),
+  set: (key, value)  => api.put(`/admin/preferences/${key}`, { value }),
+}
